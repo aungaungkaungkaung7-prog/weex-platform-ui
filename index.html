@@ -1,60 +1,425 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="my">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Crypto Trading Dashboard (Demo)</title>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
-        body { background-color: #12161c; color: #ffffff; padding: 20px; }
-        .header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 20px; border-bottom: 1px solid #2b313a; }
-        .logo { font-size: 24px; font-weight: bold; color: #f0b90b; }
-        .container { display: flex; flex-wrap: wrap; gap: 20px; margin-top: 20px; }
-        .card { background-color: #1e2329; border-radius: 8px; padding: 20px; flex: 1; min-width: 280px; }
-        .price { font-size: 32px; font-weight: bold; margin: 15px 0; }
-        .up { color: #0ecb81; }
-        .down { color: #f6465d; }
-        .status { font-size: 14px; color: #848e9c; }
-    </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Crypto Trading Dashboard (Demo)</title>
+  <style>
+    * { box-sizing: border-box; margin:0; padding:0; font-family: Arial, sans-serif; }
+    body { background:#0f1418; color:#e6eef6; padding:20px; }
+    .header { display:flex; justify-content:space-between; align-items:center; padding-bottom:16px; border-bottom:1px solid #262b31; }
+    .logo { font-size:20px; font-weight:700; color:#f0b90b; }
+    .status { font-size:13px; color:#9aa4b2; }
+
+    .container { display:flex; gap:20px; flex-wrap:wrap; margin-top:20px; }
+    .card { background:#14181c; border-radius:8px; padding:16px; flex:1; min-width:280px; max-width:480px; }
+    .price { font-size:34px; font-weight:700; margin:12px 0; }
+    .up { color:#0ecb81; }
+    .down { color:#f6465d; }
+    .muted { color:#8c94a0; font-size:13px; }
+
+    .addresses { margin-top:12px; background:#0b0e11; padding:10px; border-radius:6px; font-family:monospace; font-size:13px; color:#d6eef0; }
+    .bal { display:flex; gap:12px; align-items:center; margin-top:10px; }
+    .bal div { background:#0b1013; padding:10px; border-radius:6px; min-width:120px; }
+    .controls { margin-top:12px; display:flex; gap:8px; flex-wrap:wrap; }
+
+    button, input[type="number"], input[type="text"], select {
+      background:#0f1720; color:#e6eef6; border:1px solid #23272b; padding:8px 10px; border-radius:6px;
+    }
+    button:hover { filter:brightness(1.05); cursor:pointer; }
+    .small { font-size:13px; padding:6px 8px; }
+
+    .admin { margin-top:16px; border-top:1px dashed #22262b; padding-top:12px; }
+    label { display:block; font-size:13px; color:#9aa4b2; margin-bottom:6px; }
+    .row { display:flex; gap:8px; align-items:center; margin-bottom:8px; }
+
+    .log { margin-top:12px; font-size:13px; color:#9aa4b2; max-height:140px; overflow:auto; background:#071014; padding:8px; border-radius:6px; }
+    .footer-note { margin-top:18px; color:#7e8791; font-size:12px; }
+
+    /* modal */
+    .modal { position:fixed; inset:0; background:rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center; }
+    .modal-inner { background:#0f1316; padding:18px; border-radius:8px; width:320px; }
+  </style>
 </head>
 <body>
 
-    <div class="header">
-        <div class="logo">CRYPTO DASHBOARD</div>
-        <div class="status">Real-Time Market Data</div>
-    </div>
+  <div class="header">
+    <div class="logo">CRYPTO DASHBOARD (DEMO)</div>
+    <div class="status">Simulated market — no real funds are moved</div>
+  </div>
 
-    <div class="container">
-        <div class="card">
-            <h3>Bitcoin / USDT</h3>
-            <div id="btc-price" class="price">Loading...</div>
-            <p class="status">Live updates from Binance WebSocket</p>
+  <div class="container">
+    <div class="card" id="market-card">
+      <h3>Bitcoin / USDT</h3>
+      <div id="btc-price" class="price">--</div>
+      <div id="change" class="muted">--</div>
+      <p class="muted">Market source: <span id="market-source">Simulation</span></p>
+
+      <div class="addresses">
+        <div><strong>BTC deposit (demo):</strong></div>
+        <div style="margin-top:6px;">bc1qq9t2mrc2pmhf7rfvkuf0fd8j7uc0qs8w82wt05</div>
+        <hr style="opacity:.08;margin:8px 0" />
+        <div><strong>ETH deposit (demo):</strong></div>
+        <div style="margin-top:6px;">0x006A674fe0e05d704E95a05573233358565FCac4</div>
+      </div>
+
+      <div class="bal">
+        <div>
+          <div class="muted">USD Balance</div>
+          <div id="usd-balance" style="font-weight:700; margin-top:6px;">$1000.00</div>
         </div>
+        <div>
+          <div class="muted">BTC Balance</div>
+          <div id="btc-balance" style="font-weight:700; margin-top:6px;">0.0000 BTC</div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <input type="number" id="trade-amount" placeholder="USD amount" min="1" value="100" />
+        <button id="buy-btn" class="small">Buy BTC</button>
+        <button id="sell-btn" class="small">Sell BTC</button>
+        <button id="reset-account" class="small">Reset Account</button>
+      </div>
+
+      <div class="muted" style="margin-top:10px;">
+        This is a demo environment that uses fake balances stored in your browser (localStorage). It does NOT move real funds.
+      </div>
+
+      <div class="admin">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <strong>Admin controls (demo)</strong>
+          <button id="open-admin" class="small">Open</button>
+        </div>
+        <div class="muted" style="margin-top:6px; font-size:12px;">
+          Admin panel requires a client-side password (demo only). For production use server-side auth &amp; secure APIs.
+        </div>
+      </div>
+
+      <div class="log" id="activity-log"></div>
     </div>
 
-    <script>
-        // Binance Public WebSocket တိုက်ရိုက်ချိတ်ဆက်ခြင်း
-        const ws = new WebSocket('wss://stream.binance.com:9443/ws/btcusdt@ticker');
-        const priceElement = document.getElementById('btc-price');
-        let lastPrice = 0;
+    <div class="card" style="max-width:320px;">
+      <h4>Market Settings</h4>
+      <div style="margin-top:8px;">
+        <label>
+          Market mode:
+          <select id="mode-select">
+            <option value="sim">Simulation (default)</option>
+            <option value="live">Connect to Binance (real feed)</option>
+          </select>
+        </label>
+        <label>
+          Update interval (ms):
+          <input type="number" id="interval-input" value="1000" min="200" />
+        </label>
+        <label>
+          Sim volatility (% per tick):
+          <input type="number" id="vol-input" value="0.6" step="0.1" />
+        </label>
+        <label>
+          Sim drift (% per tick):
+          <input type="number" id="drift-input" value="0.00" step="0.01" />
+        </label>
+        <button id="apply-settings" class="small" style="margin-top:8px;">Apply</button>
+      </div>
 
-        ws.onmessage = (event) => {
-            const data = JSON.parse(event.data);
-            const currentPrice = parseFloat(data.c).toFixed(2);
-            
-            priceElement.innerText = `$${currentPrice}`;
+      <div style="margin-top:16px;">
+        <h4>Demo account</h4>
+        <label>
+          Display name:
+          <input type="text" id="display-name" placeholder="Your name (demo)" />
+        </label>
+        <button id="open-account" class="small" style="margin-top:8px;">Open / Save Account</button>
+      </div>
 
-            // စျေးနှုန်း တက်/ကျ အပေါ်မူတည်၍ အစိမ်း/အနီ ရောင် ပြောင်းလဲခြင်း
-            if (lastPrice) {
-                if (currentPrice > lastPrice) {
-                    priceElement.className = 'price up';
-                } else if (currentPrice < lastPrice) {
-                    priceElement.className = 'price down';
-                }
-            }
-            lastPrice = currentPrice;
+      <div class="footer-note">
+        Note: Do NOT use this demo with real private keys, emails, or real deposits. This only shows deposit addresses visually.
+      </div>
+    </div>
+  </div>
+
+  <!-- Admin modal (client-side demo only) -->
+  <div id="admin-modal" class="modal" style="display:none;">
+    <div class="modal-inner">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <strong>Admin Panel</strong>
+        <button id="close-admin" class="small">Close</button>
+      </div>
+
+      <div style="margin-top:10px;">
+        <label>Enter demo password:
+          <input type="password" id="admin-pass" />
+        </label>
+
+        <div id="admin-body" style="display:none; margin-top:10px;">
+          <label>Force price direction:
+            <select id="admin-direction">
+              <option value="0">None (random)</option>
+              <option value="1">Upwards bias</option>
+              <option value="-1">Downwards bias</option>
+            </select>
+          </label>
+
+          <label>Set price manually (USD):
+            <input type="number" id="admin-setprice" step="0.01" />
+          </label>
+
+          <div class="row">
+            <button id="admin-apply" class="small">Apply</button>
+            <button id="admin-reset" class="small">Reset Simulation</button>
+            <button id="admin-seed" class="small">Seed Account ($/BTC)</button>
+          </div>
+
+          <div style="margin-top:8px;">
+            <label>Seed USD amount:
+              <input type="number" id="seed-usd" value="1000" />
+            </label>
+            <label>Seed BTC amount:
+              <input type="number" id="seed-btc" value="0.0" step="0.0001" />
+            </label>
+          </div>
+
+          <div style="margin-top:8px; font-size:13px; color:#9aa4b2;">
+            Demo password is stored client-side — this is NOT secure. For production, use server auth.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // DEMO: safe, local-only simulation and fake trading
+  (function(){
+    // Default simulation params
+    let price = 30000.00; // starting price
+    let lastPrice = price;
+    let interval = parseInt(document.getElementById('interval-input').value, 10) || 1000;
+    let volatility = parseFloat(document.getElementById('vol-input').value) || 0.6; // percent
+    let drift = parseFloat(document.getElementById('drift-input').value) || 0.0; // percent
+    let mode = document.getElementById('mode-select').value; // sim or live
+    let timer = null;
+    let ws = null;
+    const priceEl = document.getElementById('btc-price');
+    const changeEl = document.getElementById('change');
+    const sourceEl = document.getElementById('market-source');
+    const logEl = document.getElementById('activity-log');
+
+    const USD_KEY = 'demo_usd';
+    const BTC_KEY = 'demo_btc';
+    const NAME_KEY = 'demo_name';
+
+    function log(msg){
+      const t = new Date().toLocaleTimeString();
+      logEl.innerHTML = `<div>[${t}] ${msg}</div>` + logEl.innerHTML;
+    }
+
+    function loadAccount(){
+      const usd = parseFloat(localStorage.getItem(USD_KEY) || '1000');
+      const btc = parseFloat(localStorage.getItem(BTC_KEY) || '0');
+      const name = localStorage.getItem(NAME_KEY) || '';
+      document.getElementById('usd-balance').innerText = `$${usd.toFixed(2)}`;
+      document.getElementById('btc-balance').innerText = `${btc.toFixed(6)} BTC`;
+      document.getElementById('display-name').value = name;
+    }
+
+    function saveAccount(usd, btc){
+      localStorage.setItem(USD_KEY, usd.toString());
+      localStorage.setItem(BTC_KEY, btc.toString());
+      loadAccount();
+    }
+
+    function resetAccount(){
+      localStorage.removeItem(USD_KEY);
+      localStorage.removeItem(BTC_KEY);
+      loadAccount();
+      log('Account reset to defaults');
+    }
+
+    function changePrice(newPrice){
+      lastPrice = price;
+      price = newPrice;
+      const delta = price - lastPrice;
+      const pct = (delta / lastPrice) * 100;
+      priceEl.innerText = `$${price.toFixed(2)}`;
+      changeEl.innerText = `${delta >=0 ? '+' : ''}${delta.toFixed(2)} (${pct >=0 ? '+' : ''}${pct.toFixed(2)}%)`;
+      priceEl.className = 'price ' + (delta>0 ? 'up' : (delta<0 ? 'down' : ''));
+    }
+
+    function simulateTick(){
+      // Random normal-ish step using Box-Muller
+      const u1 = Math.random();
+      const u2 = Math.random();
+      const z = Math.sqrt(-2*Math.log(u1)) * Math.cos(2*Math.PI*u2); // normal(0,1)
+      const stepPct = drift + z * (volatility/100);
+      const newPrice = Math.max(0.01, price * (1 + stepPct));
+      changePrice(newPrice);
+    }
+
+    function startSim(){
+      stopLive();
+      sourceEl.innerText = 'Simulation';
+      if(timer) clearInterval(timer);
+      interval = parseInt(document.getElementById('interval-input').value,10) || interval;
+      timer = setInterval(simulateTick, interval);
+      log('Simulation started');
+    }
+
+    function stopSim(){
+      if(timer) { clearInterval(timer); timer = null; log('Simulation stopped'); }
+    }
+
+    function startLive(){
+      stopSim();
+      sourceEl.innerText = 'Binance (live)';
+      // Close previous ws if any
+      if(ws){ try{ ws.close(); }catch(e){} ws=null; }
+      try {
+        ws = new WebSocket('wss://stream.binance.com:9443/ws/btcusdt@ticker');
+        ws.onmessage = (ev) => {
+          try {
+            const d = JSON.parse(ev.data);
+            const p = parseFloat(d.c);
+            if(!isNaN(p)) changePrice(p);
+          } catch(e) {}
         };
-    </script>
+        ws.onopen = () => log('Connected to Binance stream (read-only)');
+        ws.onclose = () => log('Binance stream closed');
+        ws.onerror = (e) => log('Binance websocket error');
+      } catch(e){
+        log('Unable to open Binance websocket (CORS/network may block it)');
+      }
+    }
+
+    function stopLive(){
+      if(ws){ try{ ws.close(); }catch(e){} ws=null; }
+    }
+
+    // Initialize view
+    changePrice(price);
+    loadAccount();
+
+    // Trade handlers
+    document.getElementById('buy-btn').addEventListener('click', ()=>{
+      const amount = parseFloat(document.getElementById('trade-amount').value) || 0;
+      if(amount <= 0) return alert('Enter buy amount (USD)');
+      let usd = parseFloat(localStorage.getItem(USD_KEY) || '1000');
+      let btc = parseFloat(localStorage.getItem(BTC_KEY) || '0');
+      if(amount > usd) return alert('Not enough USD balance (demo)');
+      // buy at current price (no fees)
+      const bought = amount / price;
+      usd -= amount;
+      btc += bought;
+      saveAccount(usd, btc);
+      log(`Bought ${bought.toFixed(6)} BTC for $${amount.toFixed(2)} at $${price.toFixed(2)}`);
+    });
+
+    document.getElementById('sell-btn').addEventListener('click', ()=>{
+      const amount = parseFloat(document.getElementById('trade-amount').value) || 0;
+      if(amount <= 0) return alert('Enter sell amount (USD equivalent)');
+      let usd = parseFloat(localStorage.getItem(USD_KEY) || '1000');
+      let btc = parseFloat(localStorage.getItem(BTC_KEY) || '0');
+      const neededBtc = amount / price;
+      if(neededBtc > btc) return alert('Not enough BTC balance (demo)');
+      btc -= neededBtc;
+      usd += amount;
+      saveAccount(usd, btc);
+      log(`Sold ${neededBtc.toFixed(6)} BTC for $${amount.toFixed(2)} at $${price.toFixed(2)}`);
+    });
+
+    document.getElementById('reset-account').addEventListener('click', ()=>{
+      if(confirm('Reset demo account balances to defaults?')) resetAccount();
+    });
+
+    document.getElementById('open-account').addEventListener('click', ()=>{
+      const name = document.getElementById('display-name').value.trim();
+      if(name) localStorage.setItem(NAME_KEY, name);
+      loadAccount();
+      log('Demo account opened/saved' + (name ? ` as "${name}"` : ''));
+    });
+
+    // Settings
+    document.getElementById('apply-settings').addEventListener('click', ()=>{
+      volatility = parseFloat(document.getElementById('vol-input').value) || volatility;
+      drift = parseFloat(document.getElementById('drift-input').value) || drift;
+      interval = parseInt(document.getElementById('interval-input').value,10) || interval;
+      mode = document.getElementById('mode-select').value;
+      if(mode === 'sim') startSim();
+      else startLive();
+      log('Settings applied');
+    });
+
+    document.getElementById('mode-select').addEventListener('change', (e)=>{
+      document.getElementById('market-source').innerText = e.target.value === 'sim' ? 'Simulation' : 'Binance (live)';
+    });
+
+    // Admin modal (demo)
+    const adminModal = document.getElementById('admin-modal');
+    const adminBody = document.getElementById('admin-body');
+    document.getElementById('open-admin').addEventListener('click', ()=> {
+      adminModal.style.display = 'flex';
+      adminBody.style.display = 'none';
+      document.getElementById('admin-pass').value = '';
+    });
+    document.getElementById('close-admin').addEventListener('click', ()=> adminModal.style.display = 'none');
+
+    // Simple client-side password check for demo only
+    const DEMO_PASS = 'demo-admin'; // demo-only. NOT secure.
+    document.getElementById('admin-pass').addEventListener('input', (e)=>{
+      if(e.target.value === DEMO_PASS){
+        adminBody.style.display = 'block';
+        document.getElementById('admin-setprice').value = price.toFixed(2);
+      } else adminBody.style.display = 'none';
+    });
+
+    document.getElementById('admin-apply').addEventListener('click', ()=>{
+      // apply admin controls
+      const dir = parseInt(document.getElementById('admin-direction').value,10);
+      const setp = parseFloat(document.getElementById('admin-setprice').value);
+      if(!isNaN(setp) && setp > 0){
+        changePrice(setp);
+        log(`Admin set price to $${setp.toFixed(2)}`);
+      }
+      // direction bias: we map to drift value
+      if(dir === 1) drift = Math.abs(Math.max(drift, 0.001));
+      else if(dir === -1) drift = -Math.abs(Math.max(drift, 0.001));
+      else drift = parseFloat(document.getElementById('drift-input').value) || 0.0;
+      log(`Admin applied direction bias: ${dir}`);
+      // reflect to UI
+      document.getElementById('drift-input').value = drift.toFixed(3);
+      startSim();
+    });
+
+    document.getElementById('admin-reset').addEventListener('click', ()=>{
+      price = 30000.00;
+      changePrice(price);
+      log('Admin reset simulation to default price');
+    });
+
+    document.getElementById('admin-seed').addEventListener('click', ()=>{
+      const usdSeed = parseFloat(document.getElementById('seed-usd').value) || 1000;
+      const btcSeed = parseFloat(document.getElementById('seed-btc').value) || 0;
+      saveAccount(usdSeed, btcSeed);
+      log(`Admin seeded account: $${usdSeed.toFixed(2)}, ${btcSeed.toFixed(6)} BTC`);
+    });
+
+    // initialize simulation
+    startSim();
+
+    // load stored account on start
+    loadAccount();
+
+    // Expose safe functions to window for debugging (demo only)
+    window.__demo = {
+      resetAccount,
+      loadAccount,
+      getPrice: ()=>price,
+      setPrice: (p)=>changePrice(p)
+    };
+
+    // Important security note shown to user
+    log('Demo ready. This page is not connected to wallets and does not move real funds.');
+  })();
+</script>
 
 </body>
 </html>
