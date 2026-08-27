@@ -3,33 +3,58 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Weex Trading</title>
+    <title>Crypto Trading Dashboard (Demo)</title>
     <style>
-        body {
-            background-color: #0b0e14;
-            color: #ffffff;
-            font-family: sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-        }
-        .card {
-            background-color: #12161c;
-            padding: 30px;
-            border-radius: 10px;
-            text-align: center;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-        }
-        h1 { color: #f0b90b; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
+        body { background-color: #12161c; color: #ffffff; padding: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 20px; border-bottom: 1px solid #2b313a; }
+        .logo { font-size: 24px; font-weight: bold; color: #f0b90b; }
+        .container { display: flex; flex-wrap: wrap; gap: 20px; margin-top: 20px; }
+        .card { background-color: #1e2329; border-radius: 8px; padding: 20px; flex: 1; min-width: 280px; }
+        .price { font-size: 32px; font-weight: bold; margin: 15px 0; }
+        .up { color: #0ecb81; }
+        .down { color: #f6465d; }
+        .status { font-size: 14px; color: #848e9c; }
     </style>
 </head>
 <body>
-    <div class="card">
-        <h1>WEEX TRADING</h1>
-        <p>Welcome to Weex Trading Platform</p>
+
+    <div class="header">
+        <div class="logo">CRYPTO DASHBOARD</div>
+        <div class="status">Real-Time Market Data</div>
     </div>
+
+    <div class="container">
+        <div class="card">
+            <h3>Bitcoin / USDT</h3>
+            <div id="btc-price" class="price">Loading...</div>
+            <p class="status">Live updates from Binance WebSocket</p>
+        </div>
+    </div>
+
+    <script>
+        // Binance Public WebSocket တိုက်ရိုက်ချိတ်ဆက်ခြင်း
+        const ws = new WebSocket('wss://stream.binance.com:9443/ws/btcusdt@ticker');
+        const priceElement = document.getElementById('btc-price');
+        let lastPrice = 0;
+
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            const currentPrice = parseFloat(data.c).toFixed(2);
+            
+            priceElement.innerText = `$${currentPrice}`;
+
+            // စျေးနှုန်း တက်/ကျ အပေါ်မူတည်၍ အစိမ်း/အနီ ရောင် ပြောင်းလဲခြင်း
+            if (lastPrice) {
+                if (currentPrice > lastPrice) {
+                    priceElement.className = 'price up';
+                } else if (currentPrice < lastPrice) {
+                    priceElement.className = 'price down';
+                }
+            }
+            lastPrice = currentPrice;
+        };
+    </script>
+
 </body>
 </html>
-
