@@ -1,845 +1,346 @@
 <!doctype html>
-<html lang="en">
+<html lang="my">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Demo-EX — Single-file Trading Demo</title>
-  <meta name="description" content="Single-file demo trading platform (Weex-like UI) — simulated paper trading & optional Binance public feed" />
-  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>WEEX-style Trading UI (Demo)</title>
   <style>
-    /* Basic resets & fonts */
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap');
     :root{
-      --bg:#07111a; --panel:#0b1220; --muted:#9aa5b1; --accent:#f7b250;
-      --green:#1fc07f; --red:#ff6b6b; --glass: rgba(255,255,255,0.02);
+      --bg:#0b0b0b;
+      --panel:#0f0f0f;
+      --muted:#9aa0a6;
+      --accent:#f3c623; /* yellow */
+      --green:#21c77a;
+      --red:#ff5c6c;
+      --card:#111;
+      --glass: rgba(255,255,255,0.03);
+      --radius:24px;
+      font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
     }
-    *{box-sizing:border-box;font-family:Inter,system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial;}
-    html,body{height:100%;margin:0;background:linear-gradient(180deg,var(--bg),#061219);color:#e6eef6}
-    /* header */
-    header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:rgba(255,255,255,0.02);border-bottom:1px solid rgba(255,255,255,0.02)}
-    .brand{display:flex;align-items:center;gap:10px}
-    .logo-mark{width:36px;height:36px;border-radius:8px;background:linear-gradient(45deg,#f3b041,#f6d07d)}
-    .brand h1{margin:0;font-size:18px;letter-spacing:1px}
-    .header-actions{display:flex;gap:8px;align-items:center}
-    .icon-btn{background:transparent;border:1px solid rgba(255,255,255,0.04);padding:8px;border-radius:10px;color:var(--muted);cursor:pointer}
-    /* container */
-    .wrap{max-width:1100px;margin:18px auto;padding:0 14px}
-    /* auth card */
-    .card{background:linear-gradient(180deg,rgba(255,255,255,0.01), rgba(255,255,255,0.015));border-radius:12px;padding:20px;border:1px solid rgba(255,255,255,0.02)}
-    .auth-container{max-width:420px;margin:36px auto}
-    h2{margin:0 0 12px;font-weight:700}
-    label{display:block;color:var(--muted);margin-bottom:6px;font-size:14px}
-    input[type="text"],input[type="password"],input[type="email"],select{
-      width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:#eaf6ff;margin-bottom:12px;font-size:15px;
+    html,body{height:100%;margin:0;background:linear-gradient(180deg,#070707 0%, #0b0b0b 100%);color:#fff}
+    .app{max-width:480px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;padding:12px 12px 80px;box-sizing:border-box}
+    /* top bar */
+    .topbar{display:flex;align-items:center;gap:12px;padding:8px 6px}
+    .logo{width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,#f3c623,#ffb84d);display:flex;align-items:center;justify-content:center;font-weight:700;color:#111}
+    .download{margin-left:auto;background:var(--accent);color:#0b0b0b;padding:6px 14px;border-radius:999px;font-weight:700}
+    .signup{width:100%;display:block;margin:10px auto 16px;padding:12px;border-radius:999px;background:#fff;color:#0b0b0b;font-weight:700;text-align:center}
+    /* tabs */
+    .tabs{display:flex;gap:14px;overflow:auto;padding:6px 3px 12px}
+    .tabs button{background:transparent;border:0;color:#cdd3d9;font-weight:700;padding:6px 8px;font-size:15px}
+    .tabs button.active{color:#fff;position:relative}
+    .tabs button.active::after{content:"";position:absolute;left:0;bottom:-8px;height:3px;background:var(--accent);width:100%;border-radius:3px}
+    /* subfilter */
+    .subfilter{display:flex;gap:8px;padding:10px 4px}
+    .pill{background:var(--glass);padding:8px 12px;border-radius:18px;color:#ddd;font-weight:700}
+    .pill.active{background:#222;color:#fff}
+    /* list */
+    .list{margin-top:6px}
+    .item{display:flex;align-items:center;justify-content:space-between;padding:12px;border-bottom:1px solid rgba(255,255,255,0.03)}
+    .left{display:flex;gap:12px;align-items:center}
+    .icon{width:44px;height:44px;border-radius:12px;background:#111;display:flex;align-items:center;justify-content:center;font-size:18px}
+    .meta{display:flex;flex-direction:column}
+    .symbol{font-weight:700}
+    .badge{background:#222;color:#ddd;padding:4px 8px;border-radius:8px;font-size:12px;margin-left:6px}
+    .price{font-size:18px;font-weight:700}
+    .percent{font-weight:700}
+    .percent.up{color:var(--green)}
+    .percent.down{color:var(--red)}
+    /* chart panel */
+    .chart-card{background:linear-gradient(180deg,#0e0e0e,#0c0c0c);padding:12px;border-radius:16px;margin-bottom:12px}
+    .chart-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+    .chart-title{font-weight:800}
+    .chart-sub{color:var(--muted);font-size:13px}
+    canvas{width:100%!important;height:220px!important}
+    /* bottom nav */
+    .bottom-nav{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;background:linear-gradient(180deg,#161616,#0f0f0f);border-radius:40px;padding:10px 16px;box-shadow:0 6px 30px rgba(0,0,0,0.6);display:flex;gap:18px;align-items:center;z-index:40;max-width:480px}
+    .nav-item{display:flex;flex-direction:column;align-items:center;color:#aaa;font-size:12px;background:transparent;border:0;padding:8px 10px;border-radius:12px}
+    .nav-item.active{background:rgba(255,255,255,0.03);color:#fff}
+    /* responsive tweaks */
+    @media(min-width:700px){
+      .app{padding:20px}
+      canvas{height:300px!important}
     }
-    .btn{display:inline-block;padding:10px 14px;border-radius:10px;border:none;background:var(--accent);color:#07121b;font-weight:700;cursor:pointer}
-    .muted{color:var(--muted);font-size:14px}
-    .link{color:var(--accent);cursor:pointer;text-decoration:underline}
-    /* layout for dashboard */
-    .dashboard{display:flex;gap:12px;margin-top:16px}
-    .sidebar{width:300px;min-width:260px}
-    .sidebar .card{padding:10px}
-    .market-row{display:flex;justify-content:space-between;align-items:center;padding:10px;border-radius:8px;margin-bottom:8px;background:var(--glass);cursor:pointer}
-    .market-row.active{background:linear-gradient(90deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02))}
-    .market-symbol{font-weight:700}
-    .market-sub{color:var(--muted);font-size:13px}
-    .main{flex:1;min-width:0}
-    .panel{margin-bottom:12px}
-    .pair-header{display:flex;justify-content:space-between;align-items:center;padding:12px;border-radius:10px;background:var(--glass);margin-bottom:12px}
-    .pair-title{font-size:20px;font-weight:800}
-    .price{font-size:28px;font-weight:800;color:#dbf7e8}
-    .controls{display:flex;gap:8px;align-items:center}
-    .tf-buttons{display:flex;gap:6px}
-    .tf{padding:6px 10px;border-radius:8px;background:rgba(255,255,255,0.02);font-size:13px;cursor:pointer;color:var(--muted)}
-    #chart{height:360px;border-radius:10px;overflow:hidden;background:transparent}
-    .trade-actions{display:flex;gap:10px;margin-top:10px}
-    .trade-btn{flex:1;padding:12px;border-radius:10px;border:none;font-weight:800;cursor:pointer}
-    .trade-up{background:var(--green);color:#042016}
-    .trade-down{background:var(--red);color:#2b0a0a}
-    .info-row{display:flex;gap:10px;margin-top:10px}
-    .info-chip{background:rgba(255,255,255,0.02);padding:8px;border-radius:8px;color:var(--muted)}
-    /* orders / wallet */
-    .section-title{font-weight:700;margin-bottom:8px}
-    table{width:100%;border-collapse:collapse}
-    th,td{padding:8px;text-align:left;border-bottom:1px solid rgba(255,255,255,0.02);font-size:14px}
-    .small{font-size:13px;color:var(--muted)}
-    /* responsive */
-    @media(max-width:900px){
-      .dashboard{flex-direction:column}
-      .sidebar{width:100%;min-width:unset;order:2}
-      .main{order:1}
-      #chart{height:300px}
-    }
-    /* slide-over menu for mobile (hamburger) */
-    .overlay{position:fixed;inset:0;display:none;background:rgba(0,0,0,0.45);z-index:80}
-    .slide{position:fixed;top:0;right:0;height:100%;width:320px;background:linear-gradient(180deg,#07121a,#061219);box-shadow:-20px 0 40px rgba(0,0,0,0.6);padding:18px;z-index:90;overflow:auto;border-left:1px solid rgba(255,255,255,0.03)}
-    .close-x{float:right;cursor:pointer}
     /* small helpers */
-    .right{margin-left:auto}
-    .center{text-align:center}
-    .pill{padding:6px 8px;border-radius:999px;background:rgba(255,255,255,0.02)}
+    .small{font-size:12px;color:var(--muted)}
+    .row{display:flex;align-items:center}
   </style>
 </head>
 <body>
-  <header>
-    <div class="brand">
-      <div class="logo-mark" aria-hidden></div>
-      <h1>DEMO-EX</h1>
+  <div class="app" id="app">
+    <div class="topbar">
+      <div class="logo">W</div>
+      <div style="display:flex;flex-direction:column">
+        <div style="font-weight:800">WEEX Cryp...</div>
+        <div style="font-size:12px;color:var(--muted)">weex.com</div>
+      </div>
+      <div class="download" id="downloadBtn">Download</div>
     </div>
-    <div class="header-actions">
-      <div class="icon-btn" id="settingsBtn" title="Settings">⚙️</div>
-      <div class="icon-btn" id="menuToggle" title="Markets">☰</div>
-    </div>
-  </header>
 
-  <div class="wrap" id="appRoot">
-    <!-- AUTH area -->
-    <div id="authArea" class="auth-container">
-      <div class="card">
-        <div id="loginView">
-          <h2>Log In</h2>
-          <label>Email</label>
-          <input id="loginEmail" type="email" placeholder="you@example.com" />
-          <label>Password</label>
-          <input id="loginPassword" type="password" placeholder="Password" />
-          <button id="loginBtn" class="btn" style="width:100%">Log In</button>
-          <div class="center muted" style="margin-top:10px">Don't have an account? <span class="link" id="gotoRegister">Create an account</span></div>
+    <div class="signup">Sign Up</div>
+
+    <div class="tabs" id="mainTabs">
+      <button class="active" data-tab="hot">Hot</button>
+      <button data-tab="gainers">Gainers</button>
+      <button data-tab="losers">Losers</button>
+      <button data-tab="trending">Trending</button>
+      <button data-tab="listing">Listing</button>
+    </div>
+
+    <div class="subfilter">
+      <div class="pill active" data-filter="futures">Futures</div>
+      <div class="pill" data-filter="tradfi">TradFi 🔥</div>
+      <div class="pill" data-filter="spot">Spot</div>
+    </div>
+
+    <div id="chartArea" class="chart-card" style="display:none">
+      <div class="chart-top">
+        <div>
+          <div class="chart-title" id="chartSymbol">BTCUSDT</div>
+          <div class="chart-sub" id="chartPrice">79,999.9 • <span id="chartChange" class="small up">+2.07%</span></div>
         </div>
-
-        <div id="registerView" style="display:none">
-          <h2>Get Started</h2>
-          <label>Email</label>
-          <input id="regEmail" type="email" placeholder="you@example.com" />
-          <label>Password</label>
-          <input id="regPassword" type="password" placeholder="Password" />
-          <label>Repeat Password</label>
-          <input id="regPassword2" type="password" placeholder="Repeat Password" />
-          <label><input id="agree18" type="checkbox" /> I am at least 18 years old and agree to the Terms</label>
-          <button id="registerBtn" class="btn" style="width:100%;margin-top:8px">Create account</button>
-          <div class="center muted" style="margin-top:10px">Already have an account? <span class="link" id="gotoLogin">Log in</span></div>
+        <div class="row small">
+          <div style="margin-right:8px">1D</div>
+          <div style="background:rgba(255,255,255,0.06);padding:6px 10px;border-radius:8px">Indicators</div>
         </div>
       </div>
+      <canvas id="priceChart"></canvas>
     </div>
 
-    <!-- DASHBOARD area -->
-    <div id="dashArea" style="display:none">
-      <div class="dashboard">
-        <aside class="sidebar">
-          <div class="card">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
-              <div style="font-weight:800">Markets</div>
-              <div class="right small">Portfolio: <span id="portfolioTotal">-</span></div>
-            </div>
-            <div id="marketList"></div>
-            <hr style="border:none;border-top:1px solid rgba(255,255,255,0.03);margin:12px 0">
-            <div>
-              <div class="section-title">Portfolio</div>
-              <div id="portfolioList" class="small"></div>
-            </div>
-          </div>
-
-          <div style="height:12px"></div>
-
-          <div class="card">
-            <div style="display:flex;justify-content:space-between;align-items:center">
-              <div style="font-weight:700">Quick Actions</div>
-              <div class="small">Demo only</div>
-            </div>
-            <div style="margin-top:10px;display:flex;gap:8px">
-              <button class="btn" id="btnWallet">Wallet</button>
-              <button class="btn" id="btnOrders">Orders</button>
-            </div>
-            <div style="margin-top:10px">
-              <div class="small">Data source</div>
-              <select id="dataSource" style="width:100%;margin-top:6px">
-                <option value="sim">Simulated</option>
-                <option value="binance">Binance public trade (selected symbol only)</option>
-              </select>
-            </div>
-          </div>
-        </aside>
-
-        <main class="main">
-          <div class="panel card">
-            <div class="pair-header">
-              <div>
-                <div class="pair-title" id="pairTitle">BTC / USDT <div class="small">Bitcoin Perpetual</div></div>
-              </div>
-              <div style="text-align:right">
-                <div class="price" id="currentPrice">-</div>
-                <div class="small" id="priceChange">0.00%</div>
-              </div>
-            </div>
-
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-              <div class="tf-buttons">
-                <div class="tf" data-tf="1m">1m</div>
-                <div class="tf" data-tf="5m">5m</div>
-                <div class="tf" data-tf="15m">15m</div>
-                <div class="tf" data-tf="1h">1h</div>
-                <div class="tf" data-tf="1d">1d</div>
-              </div>
-              <div class="info-chip">24h High: <span id="high24">-</span></div>
-            </div>
-
-            <div id="chart" aria-hidden></div>
-
-            <div class="trade-actions">
-              <button class="trade-btn trade-up" id="buyBtn">Buy Up</button>
-              <button class="trade-btn trade-down" id="sellBtn">Buy Down</button>
-            </div>
-
-            <div class="info-row">
-              <div class="info-chip">Open: <span id="openP">-</span></div>
-              <div class="info-chip">Close: <span id="closeP">-</span></div>
-              <div class="info-chip">High: <span id="highP">-</span></div>
-              <div class="info-chip">Low: <span id="lowP">-</span></div>
-            </div>
-          </div>
-
-          <div class="card panel" id="ordersPanel">
-            <div style="display:flex;justify-content:space-between;align-items:center">
-              <div style="font-weight:700">Place Market Order</div>
-              <div class="small">Orders fill instantly at current price (demo)</div>
-            </div>
-            <div style="margin-top:12px;display:flex;gap:8px;align-items:center">
-              <select id="orderSymbol" style="width:160px;padding:8px;border-radius:8px;background:transparent;border:1px solid rgba(255,255,255,0.04)">
-                <!-- populated by JS -->
-              </select>
-              <input id="orderQty" type="text" placeholder="Quantity (e.g., 0.01)" style="flex:1" />
-              <button class="btn" id="placeOrder">Place</button>
-            </div>
-            <div style="margin-top:12px">
-              <div class="section-title">Recent Trades</div>
-              <div id="recentTrades" class="small"></div>
-            </div>
-          </div>
-
-        </main>
-      </div>
+    <div class="list" id="marketList">
+      <!-- JS will fill -->
     </div>
+
   </div>
 
-  <!-- slide-over for menu (mobile) -->
-  <div id="overlay" class="overlay"></div>
-  <div id="slide" class="slide" style="display:none">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-      <div style="font-weight:800">Markets</div>
-      <div class="close-x link" id="closeSlide">Close</div>
-    </div>
-    <div id="slideMarketList"></div>
+  <div class="bottom-nav" id="bottomNav">
+    <button class="nav-item active" data-name="home">🏠<span style="margin-top:6px">Home</span></button>
+    <button class="nav-item" data-name="markets">📈<span style="margin-top:6px">Markets</span></button>
+    <button class="nav-item" data-name="futures">🧾<span style="margin-top:6px">Futures</span></button>
+    <button class="nav-item" data-name="trade">🔁<span style="margin-top:6px">Trade</span></button>
+    <button class="nav-item" data-name="assets">💼<span style="margin-top:6px">Assets</span></button>
   </div>
 
-  <!-- orders modal / wallet modal simple overlays -->
-  <div id="modal" style="display:none;position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:200;background:linear-gradient(180deg,#07111a,#061219);padding:18px;border-radius:12px;border:1px solid rgba(255,255,255,0.03);min-width:320px">
-    <div style="display:flex;justify-content:space-between;align-items:center"><div id="modalTitle"></div><div class="link" id="closeModal">✕</div></div>
-    <div id="modalBody" style="margin-top:12px"></div>
-  </div>
-  <div id="modalShield" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:190"></div>
-
-  <!-- Lightweight charts -->
-  <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
-
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
-  /******************************************************************************
-   * Demo-EX Single-file app
-   * - Save as index.html and open in browser
-   * - All data persisted to localStorage (users, balances, orders, trades)
-   * - Market data simulated by default; optional Binance public trade feed (selected symbol)
-   ******************************************************************************/
+    // Mock market data (initial)
+    const markets = [
+      {id:'BTCUSDT', name:'BTC', extra:'400x', price:79999.9, change:2.07, type:'futures', icon:'🟠'},
+      {id:'ETHUSDT', name:'ETH', extra:'400x', price:2500.67, change:1.33, type:'futures', icon:'🔷'},
+      {id:'SOLUSDT', name:'SOL', extra:'300x', price:109.24, change:12.86, type:'futures', icon:'🟣'},
+      {id:'COWUSDT', name:'COW', extra:'New', price:0.04871, change:4.86, type:'spot', icon:'🐮'},
+      {id:'PEPEUSDT', name:'1000PEPE', extra:'', price:0.0039154, change:5.73, type:'spot', icon:'🐸'},
+      {id:'XRPU', name:'XRPU', extra:'300x', price:1.4530, change:5.74, type:'futures', icon:'⚪'},
+    ];
 
-  // ---------------------------
-  // App state, markets & utils
-  // ---------------------------
-  const MARKETS = [
-    { symbol: 'BTC/USDT', name: 'Bitcoin', base: 64835 },
-    { symbol: 'ETH/USDT', name: 'Ethereum', base: 3300 },
-    { symbol: 'SOL/USDT', name: 'Solana', base: 110 },
-    { symbol: 'ADA/USDT', name: 'Cardano', base: 0.48 },
-    { symbol: 'XRP/USDT', name: 'XRP', base: 0.63 },
-    { symbol: 'DOGE/USDT', name: 'Dogecoin', base: 0.08 },
-    { symbol: 'BNB/USDT', name: 'BNB', base: 410 }
-  ];
+    // DOM refs
+    const listEl = document.getElementById('marketList');
+    const chartArea = document.getElementById('chartArea');
+    const chartSymbol = document.getElementById('chartSymbol');
+    const chartPrice = document.getElementById('chartPrice');
+    const chartChange = document.getElementById('chartChange');
 
-  const LS_KEYS = {
-    USERS: 'demoex_users_v1',
-    AUTH: 'demoex_auth_v1',
-    BALANCES: 'demoex_balances_v1',
-    ORDERS: 'demoex_orders_v1',
-    TRADES: 'demoex_trades_v1'
-  };
+    // active
+    let activeFilter = 'futures';
+    let activeTab = 'hot';
+    let activeMarket = markets[0].id;
 
-  function nowSec(){ return Math.floor(Date.now()/1000); }
-  function fmt(n){ if(n === null || n === undefined) return '-'; if(Math.abs(n) >= 1000) return n.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); return Number(n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
-  function load(key){ try{ return JSON.parse(localStorage.getItem(key) || 'null'); }catch(e){return null;} }
-  function save(key, obj){ localStorage.setItem(key, JSON.stringify(obj)); }
-
-  // Initialize storage if missing
-  if(!load(LS_KEYS.USERS)) save(LS_KEYS.USERS, []);
-  if(!load(LS_KEYS.BALANCES)) save(LS_KEYS.BALANCES, {});
-  if(!load(LS_KEYS.ORDERS)) save(LS_KEYS.ORDERS, []);
-  if(!load(LS_KEYS.TRADES)) save(LS_KEYS.TRADES, []);
-
-  // Auth helpers (simple)
-  function currentUser(){ return load(LS_KEYS.AUTH); }
-  function setCurrentUser(u){ if(u) save(LS_KEYS.AUTH, u); else localStorage.removeItem(LS_KEYS.AUTH); }
-
-  // Demo: create initial balances for new user
-  function ensureBalancesForUser(userEmail){
-    const balances = load(LS_KEYS.BALANCES) || {};
-    if(!balances[userEmail]){
-      // default: 10,000 USDT
-      const base = { 'USDT': 10000 };
-      balances[userEmail] = base;
-      save(LS_KEYS.BALANCES, balances);
-    }
-  }
-
-  // ---------------------------
-  // Market simulation & candles
-  // ---------------------------
-  let prices = {}; // current spot prices per symbol
-  let candlesStore = {}; // per-symbol arrays of candles for chart
-  let volumes = {};
-  MARKETS.forEach(m => {
-    prices[m.symbol] = m.base + (Math.random() - 0.5) * m.base * 0.03;
-    candlesStore[m.symbol] = []; volumes[m.symbol] = [];
-  });
-
-  // Build initial candle history for symbol and timeframe (in minutes)
-  function buildInitialCandles(symbol, timeframeMins=1, count=120){
-    const now = Math.floor(Date.now()/1000);
-    const step = timeframeMins * 60;
-    let t = now - count * step;
-    let price = prices[symbol];
-    const arr = [];
-    const vols = [];
-    for(let i=0;i<count;i++){
-      const open = price;
-      const change = (Math.random()-0.5) * (Math.max(0.0001, price * 0.002)) * (timeframeMins/1);
-      const close = Math.max(0.00001, open + change);
-      const high = Math.max(open, close) + Math.random() * (Math.max(0.0001, price * 0.0005));
-      const low = Math.min(open, close) - Math.random() * (Math.max(0.0001, price * 0.0005));
-      const vol = Math.floor(Math.random()*500 + 20);
-      arr.push({ time: t, open: round(open), high: round(high), low: round(low), close: round(close) });
-      vols.push({ time: t, value: vol, color: close>=open ? 'rgba(31,192,127,0.6)' : 'rgba(255,107,107,0.6)' });
-      price = close;
-      t += step;
-    }
-    candlesStore[symbol] = arr;
-    volumes[symbol] = vols;
-  }
-
-  function round(v){ return Math.round(v*100)/100; }
-
-  // Create initial candles for all symbols
-  MARKETS.forEach(m => buildInitialCandles(m.symbol, 1, 120));
-
-  // Simulation tick: update prices (random walk)
-  let simInterval = null;
-  function startSimulation(){
-    if(simInterval) clearInterval(simInterval);
-    simInterval = setInterval(() => {
-      MARKETS.forEach(m => {
-        const sym = m.symbol;
-        const change = (Math.random()-0.5) * (m.base * 0.0018);
-        prices[sym] = Math.max(0.00001, round(prices[sym] + change));
+    // Build market list UI
+    function renderList(){
+      listEl.innerHTML = '';
+      const filtered = markets.filter(m=>{
+        if(activeFilter==='futures') return true; // show all for demo (you can filter)
+        if(activeFilter==='spot') return m.type==='spot';
+        if(activeFilter==='tradfi') return m.type==='tradfi';
+        return true;
       });
-      // update selected symbol candle occasionally
-      randomTickUpdateSelected();
-      refreshUiPrices();
-    }, 1200 + Math.random()*800);
-  }
-
-  // We'll update selected candle series to reflect price changes
-  let selectedSymbol = MARKETS[0].symbol;
-  let selectedTF = '1m';
-  let chart, candleSeries, volumeSeries;
-
-  function randomTickUpdateSelected(){
-    const sym = selectedSymbol;
-    if(!candlesStore[sym] || candlesStore[sym].length===0) return;
-    const doNew = Math.random() < 0.28;
-    const step = 60; // for 1m base
-    if(doNew){
-      const last = candlesStore[sym][candlesStore[sym].length-1];
-      const open = last ? last.close : prices[sym];
-      const close = prices[sym];
-      const high = Math.max(open, close) + Math.random()*(Math.max(0.0001, open*0.0005));
-      const low = Math.min(open, close) - Math.random()*(Math.max(0.0001, open*0.0005));
-      const t = (last ? last.time : Math.floor(Date.now()/1000)) + step;
-      const vol = Math.floor(Math.random()*700 + 20);
-      const newc = { time: t, open: round(open), high: round(high), low: round(low), close: round(close) };
-      candlesStore[sym].push(newc);
-      volumes[sym].push({ time: t, value: vol, color: close>=open ? 'rgba(31,192,127,0.6)' : 'rgba(255,107,107,0.6)' });
-      if(candleSeries) candleSeries.update(newc);
-      if(volumeSeries) volumeSeries.update(volumes[sym][volumes[sym].length-1]);
-    } else {
-      const last = candlesStore[sym][candlesStore[sym].length-1];
-      if(last){
-        last.close = round(prices[sym]);
-        last.high = Math.max(last.high, last.close + Math.random()*(Math.max(0.0001,last.close*0.0002)));
-        last.low = Math.min(last.low, last.close - Math.random()*(Math.max(0.0001,last.close*0.0002)));
-        if(candleSeries) candleSeries.update({ time: last.time, open: last.open, high: last.high, low: last.low, close: last.close });
-        const vi = volumes[sym].length-1;
-        volumes[sym][vi].value = Math.max(1, volumes[sym][vi].value + Math.floor(Math.random()*40 - 10));
-        volumes[sym][vi].color = last.close >= last.open ? 'rgba(31,192,127,0.6)' : 'rgba(255,107,107,0.6)';
-        if(volumeSeries) volumeSeries.update(volumes[sym][vi]);
-      }
+      filtered.forEach(m=>{
+        const it = document.createElement('div');
+        it.className = 'item';
+        it.innerHTML = `
+          <div class="left">
+            <div class="icon">${m.icon}</div>
+            <div class="meta">
+              <div style="display:flex;align-items:center">
+                <div class="symbol">${m.name}</div>
+                ${m.extra?`<div class="badge">${m.extra}</div>`:''}
+              </div>
+              <div class="small">${m.id}</div>
+            </div>
+          </div>
+          <div style="text-align:right">
+            <div class="price">${formatPrice(m.price)}</div>
+            <div class="percent ${m.change>=0?'up':'down'}">${m.change>=0?'+':''}${m.change.toFixed(2)}%</div>
+          </div>
+        `;
+        it.addEventListener('click',()=>onSelectMarket(m.id));
+        listEl.appendChild(it);
+      });
     }
-    // trim history
-    if(candlesStore[sym].length > 800){ candlesStore[sym].splice(0,100); volumes[sym].splice(0,100); if(candleSeries) candleSeries.setData(candlesStore[sym]); if(volumeSeries) volumeSeries.setData(volumes[sym]); }
-  }
 
-  // ---------------------------
-  // Binance public trade bridge (optional)
-  // - Browser can subscribe to a trade stream for selected symbol (no API key)
-  // - Will update prices[selectedSymbol] when trades arrive
-  // ---------------------------
-  let binanceWs = null;
-  function enableBinanceForSymbol(symbol){
-    disableBinance();
-    try{
-      const pair = symbol.replace('/','').toLowerCase(); // e.g., btcusdt
-      const url = `wss://stream.binance.com:9443/ws/${pair}@trade`;
-      binanceWs = new WebSocket(url);
-      binanceWs.onopen = ()=> console.log('binance ws open', pair);
-      binanceWs.onmessage = (evt) => {
-        try{
-          const d = JSON.parse(evt.data);
-          if(d && d.p){
-            const price = parseFloat(d.p);
-            prices[symbol] = round(price);
+    // price formatter
+    function formatPrice(v){
+      if(v>=1000) return new Intl.NumberFormat().format(Math.round(v*100)/100);
+      if(v>=1) return v.toFixed(4).replace(/\.?0+$/,'');
+      return v.toPrecision(6);
+    }
+
+    // Chart setup
+    let chart = null;
+    let seriesData = [];
+    function createChart(initial){
+      const ctx = document.getElementById('priceChart').getContext('2d');
+      if(chart) chart.destroy();
+      chart = new Chart(ctx, {
+        type:'line',
+        data:{
+          labels:initial.map((_,i)=>i),
+          datasets:[{
+            label: 'Price',
+            data: initial,
+            borderColor:'#f3c623',
+            backgroundColor:'rgba(243,198,35,0.06)',
+            pointRadius:0,
+            tension:0.25,
+          }]
+        },
+        options:{
+          responsive:true,
+          maintainAspectRatio:false,
+          scales:{
+            x:{display:false},
+            y:{grid:{color:'rgba(255,255,255,0.03)'}}
+          },
+          plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false}}
+        }
+      });
+    }
+
+    // When user selects a market
+    function onSelectMarket(id){
+      activeMarket = id;
+      const m = markets.find(x=>x.id===id);
+      if(!m) return;
+      chartArea.style.display = 'block';
+      chartSymbol.textContent = m.id;
+      chartPrice.innerHTML = formatPrice(m.price) + ' • ';
+      chartChange.textContent = `${m.change>=0?'+':''}${m.change.toFixed(2)}%`;
+      chartChange.className = 'small ' + (m.change>=0?'up':'down');
+
+      // build mock series
+      seriesData = buildSeries(m.price);
+      createChart(seriesData);
+    }
+
+    // Build a mock series around a base price
+    function buildSeries(base){
+      const len = 60;
+      const arr = [];
+      let p = base;
+      for(let i=0;i<len;i++){
+        const delta = (Math.random()-0.5) * (Math.max(1, base*0.002));
+        p = Math.max(0.000001, p + delta);
+        arr.push(Math.round(p*100000)/100000);
+      }
+      return arr;
+    }
+
+    // Live update prices every second (simulate real market)
+    function liveUpdate(){
+      // mutate markets
+      markets.forEach(m=>{
+        const vol = Math.max(0.00001, (Math.random()-0.5) * (m.price * 0.002));
+        m.price = Math.max(0.0000001, m.price + vol);
+        // recalc change as percentage from a synthetic previous (for demo)
+        m.change = ((Math.random()-0.4)*6); // random change between -4..+? to look lively
+      });
+      renderList();
+      // update chart if visible
+      if(chart && activeMarket){
+        const m = markets.find(x=>x.id===activeMarket);
+        if(m){
+          // push new point
+          const last = chart.data.datasets[0].data;
+          const newp = Math.max(0.000001, last[last.length-1] + (Math.random()-0.5)*(m.price*0.0008));
+          last.push(Math.round(newp*100000)/100000);
+          // keep length
+          while(last.length>100) last.shift();
+          chart.data.labels = last.map((_,i)=>i);
+          chart.update('none');
+          chartPrice.innerHTML = formatPrice(m.price) + ' • ';
+          chartChange.textContent = `${m.change>=0?'+':''}${m.change.toFixed(2)}%`;
+          chartChange.className = 'small ' + (m.change>=0?'up':'down');
+        }
+      }
+      setTimeout(liveUpdate, 1000);
+    }
+
+    // setup filters and tabs interactivity
+    document.querySelectorAll('.pill').forEach(el=>{
+      el.addEventListener('click',()=>{
+        document.querySelectorAll('.pill').forEach(x=>x.classList.remove('active'));
+        el.classList.add('active');
+        activeFilter = el.getAttribute('data-filter');
+        renderList();
+      });
+    });
+    document.querySelectorAll('#mainTabs button').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        document.querySelectorAll('#mainTabs button').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        activeTab = btn.getAttribute('data-tab');
+        // For demo: no deep filtering, but could be added
+      });
+    });
+
+    // bottom nav events
+    document.querySelectorAll('.nav-item').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        document.querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active'));
+        btn.classList.add('active');
+        const name = btn.getAttribute('data-name');
+        // demo switch: if markets selected, scroll to list; if trade selected open chart area
+        if(name==='markets'){
+          window.scrollTo({top:200,behavior:'smooth'});
+        } else if(name==='trade'){
+          // open chart for active market
+          if(!chartArea.style.display || chartArea.style.display==='none') {
+            onSelectMarket(activeMarket || markets[0].id);
           }
-        }catch(e){}
-      };
-      binanceWs.onclose = ()=> { console.log('binance ws closed'); binanceWs=null; };
-      binanceWs.onerror = (e)=> { console.warn('binance ws error', e); disableBinance(); };
-    }catch(e){ console.warn('binance connect failed', e); binanceWs = null;}
-  }
-  function disableBinance(){
-    if(binanceWs){ try{ binanceWs.close(); }catch(e){} binanceWs=null; }
-  }
-
-  // ---------------------------
-  // UI rendering & interactions
-  // ---------------------------
-  const elAuthArea = document.getElementById('authArea');
-  const elLoginView = document.getElementById('loginView');
-  const elRegisterView = document.getElementById('registerView');
-  const elDashArea = document.getElementById('dashArea');
-  const marketListEl = document.getElementById('marketList');
-  const slideMarketListEl = document.getElementById('slideMarketList');
-  const portfolioListEl = document.getElementById('portfolioList');
-  const portfolioTotalEl = document.getElementById('portfolioTotal');
-  const pairTitleEl = document.getElementById('pairTitle');
-  const currentPriceEl = document.getElementById('currentPrice');
-  const priceChangeEl = document.getElementById('priceChange');
-  const high24El = document.getElementById('high24');
-  const openP = document.getElementById('openP');
-  const closeP = document.getElementById('closeP');
-  const highP = document.getElementById('highP');
-  const lowP = document.getElementById('lowP');
-  const overlay = document.getElementById('overlay');
-  const slide = document.getElementById('slide');
-  const menuToggle = document.getElementById('menuToggle');
-  const closeSlide = document.getElementById('closeSlide');
-  const settingsBtn = document.getElementById('settingsBtn');
-  const dataSourceSelect = document.getElementById('dataSource');
-  const modal = document.getElementById('modal');
-  const modalShield = document.getElementById('modalShield');
-  const modalTitle = document.getElementById('modalTitle');
-  const modalBody = document.getElementById('modalBody');
-  const closeModal = document.getElementById('closeModal');
-
-  // login/register actions
-  document.getElementById('gotoRegister').addEventListener('click', ()=>{ elLoginView.style.display='none'; elRegisterView.style.display='block'; });
-  document.getElementById('gotoLogin').addEventListener('click', ()=>{ elRegisterView.style.display='none'; elLoginView.style.display='block'; });
-
-  document.getElementById('registerBtn').addEventListener('click', () => {
-    const email = document.getElementById('regEmail').value.trim();
-    const p1 = document.getElementById('regPassword').value;
-    const p2 = document.getElementById('regPassword2').value;
-    const agree = document.getElementById('agree18').checked;
-    if(!email || !p1 || !p2){ alert('Complete required fields'); return; }
-    if(p1 !== p2){ alert('Passwords do not match'); return; }
-    if(!agree){ alert('You must confirm age'); return; }
-    const users = load(LS_KEYS.USERS) || [];
-    if(users.find(u=>u.email === email)){ alert('User exists'); return; }
-    users.push({ email, password: p1 });
-    save(LS_KEYS.USERS, users);
-    // initialize balances
-    ensureBalancesForUser(email);
-    // auto-login
-    setCurrentUser({ email });
-    showDashboard();
-  });
-
-  document.getElementById('loginBtn').addEventListener('click', () => {
-    const email = document.getElementById('loginEmail').value.trim();
-    const pw = document.getElementById('loginPassword').value;
-    if(!email || !pw){ alert('Enter email & password'); return; }
-    const users = load(LS_KEYS.USERS) || [];
-    const u = users.find(x=>x.email===email && x.password===pw);
-    if(!u){ alert('Invalid credentials'); return; }
-    setCurrentUser({ email });
-    ensureBalancesForUser(email);
-    showDashboard();
-  });
-
-  // show dashboard
-  function showDashboard(){
-    elAuthArea.style.display='none';
-    elDashArea.style.display='block';
-    renderMarketList();
-    renderPortfolio();
-    populateOrderSymbolSelect();
-    startSimulation();
-    initChartFor(selectedSymbol);
-  }
-
-  // If logged-in already from localStorage, show dashboard
-  if(currentUser()){
-    showDashboard();
-  }
-
-  // render market list in sidebar and slide panel
-  function renderMarketList(){
-    marketListEl.innerHTML = '';
-    slideMarketListEl.innerHTML = '';
-    MARKETS.forEach(m => {
-      const cur = prices[m.symbol];
-      const row = document.createElement('div');
-      row.className = 'market-row' + (m.symbol === selectedSymbol ? ' active' : '');
-      row.innerHTML = `<div>
-                          <div class="market-symbol">${m.symbol}</div>
-                          <div class="market-sub">${m.name}</div>
-                       </div>
-                       <div style="text-align:right">
-                          <div style="font-weight:700">${fmt(cur)}</div>
-                          <div class="small">${calcChangeShort(m.symbol)}</div>
-                       </div>`;
-      row.addEventListener('click', () => {
-        selectSymbol(m.symbol);
+        } else if(name==='assets'){
+          alert('Assets screen — demo only');
+        } else if(name==='home'){
+          window.scrollTo({top:0,behavior:'smooth'});
+        } else if(name==='futures'){
+          // activate futures pill
+          document.querySelectorAll('.pill').forEach(x=>x.classList.remove('active'));
+          document.querySelector('.pill[data-filter="futures"]').classList.add('active');
+          activeFilter='futures';
+          renderList();
+        }
+        console.log('Nav clicked:',name);
       });
-      marketListEl.appendChild(row);
-
-      // slide list
-      const row2 = row.cloneNode(true);
-      row2.style.marginBottom = '8px';
-      row2.addEventListener('click', () => { selectSymbol(m.symbol); closeSlideMenu(); });
-      slideMarketListEl.appendChild(row2);
     });
-  }
 
-  // quick percent change vs previous candle open
-  function calcChangeShort(symbol){
-    const arr = candlesStore[symbol] || [];
-    if(arr.length===0) return '';
-    const prev = arr[arr.length-1].open || arr[0].open;
-    const pct = ((prices[symbol] - prev) / prev) * 100;
-    return (pct>=0?'+':'') + pct.toFixed(2) + '%';
-  }
+    document.getElementById('downloadBtn').addEventListener('click',()=>alert('Download action (demo)'));
 
-  // render portfolio
-  function renderPortfolio(){
-    const user = currentUser();
-    if(!user){ portfolioListEl.innerHTML = '<div class="small">No user</div>'; return; }
-    const balances = load(LS_KEYS.BALANCES) || {};
-    const my = balances[user.email] || {};
-    portfolioListEl.innerHTML = '';
-    let total = 0;
-    Object.keys(my).forEach(asset => {
-      let display = my[asset];
-      let usdVal = 0;
-      if(asset === 'USDT') usdVal = my[asset];
-      else {
-        const sym = asset + '/USDT';
-        const p = prices[sym] || 0;
-        usdVal = (p * my[asset]);
-      }
-      total += usdVal;
-      const div = document.createElement('div');
-      div.style.display = 'flex'; div.style.justifyContent='space-between'; div.style.marginBottom='6px';
-      div.innerHTML = `<div><strong>${asset}</strong> <div class="small">${fmt(display)}</div></div><div class="small">${fmt(usdVal)} USDT</div>`;
-      portfolioListEl.appendChild(div);
+    // initial render
+    renderList();
+    onSelectMarket(activeMarket);
+
+    // start live update
+    setTimeout(liveUpdate,1000);
+
+    // small accessibility: allow keyboard selection (demo)
+    window.addEventListener('keydown',(e)=>{
+      if(e.key==='ArrowDown' || e.key==='j'){ /* next item */}
     });
-    portfolioTotalEl.textContent = fmt(total) + ' USDT';
-  }
 
-  // select symbol and update chart
-  function selectSymbol(sym){
-    selectedSymbol = sym;
-    // set pair title
-    const meta = MARKETS.find(m=>m.symbol===sym);
-    pairTitleEl.innerHTML = `${sym} <div class="small">${meta ? meta.name : ''}</div>`;
-    // regenerate candles for timeframe
-    const tf = selectedTF;
-    const mins = tfToMins(tf);
-    buildInitialCandles(sym, mins, 120);
-    initChartFor(sym, mins);
-    renderMarketList();
-    renderPortfolio();
-    // if data source = binance, enable bridge for selected symbol
-    if(dataSourceSelect.value === 'binance') enableBinanceForSymbol(sym); else disableBinance();
-  }
-
-  // timeframe helper
-  function tfToMins(tf){ if(tf==='1m') return 1; if(tf==='5m') return 5; if(tf==='15m') return 15; if(tf==='1h') return 60; if(tf==='1d') return 1440; return 1; }
-
-  // Chart init using lightweight-charts
-  function initChartFor(sym, timeframeMins=1){
-    const container = document.getElementById('chart');
-    container.innerHTML = '';
-    chart = LightweightCharts.createChart(container, {
-      layout: { backgroundColor: 'transparent', textColor: '#e6eef6' },
-      width: container.clientWidth,
-      height: 360,
-      grid: { vertLines: { color: 'rgba(255,255,255,0.03)' }, horzLines: { color: 'rgba(255,255,255,0.03)' } },
-      rightPriceScale: { scaleMargins: { top: 0.15, bottom: 0.15 } },
-      timeScale: { timeVisible: true, secondsVisible: false }
-    });
-    candleSeries = chart.addCandlestickSeries({
-      upColor: 'rgba(31,192,127,1)', downColor: 'rgba(255,107,107,1)',
-      borderDownColor: 'rgba(255,107,107,1)', borderUpColor: 'rgba(31,192,127,1)',
-      wickDownColor: 'rgba(255,107,107,0.9)', wickUpColor: 'rgba(31,192,127,0.9)'
-    });
-    volumeSeries = chart.addHistogramSeries({ color: 'rgba(128,128,128,0.5)', scaleMargins: { top:0.8, bottom: 0 }});
-    const data = candlesStore[sym] || [];
-    candleSeries.setData(data);
-    volumeSeries.setData(volumes[sym] || []);
-    updateUiPriceDisplay();
-    window.addEventListener('resize', ()=> chart.applyOptions({ width: container.clientWidth }));
-  }
-
-  // update UI price & stats
-  function updateUiPriceDisplay(){
-    const cur = prices[selectedSymbol];
-    currentPriceEl.textContent = fmt(cur) + ' USDT';
-    const arr = candlesStore[selectedSymbol] || [];
-    const prev = arr.length ? arr[arr.length-1].open : cur;
-    const pct = ((cur - prev) / prev) * 100;
-    priceChangeEl.textContent = (pct>=0?'+':'') + pct.toFixed(2) + '%';
-    priceChangeEl.style.color = pct>=0 ? 'var(--green)' : 'var(--red)';
-    high24El.textContent = fmt(Math.max(...(arr.map(x=>x.high)||[cur])));
-    openP.textContent = fmt(prev);
-    closeP.textContent = fmt(arr.length?arr[arr.length-1].close:cur);
-    highP.textContent = fmt(Math.max(...(arr.map(x=>x.high)||[cur])));
-    lowP.textContent = fmt(Math.min(...(arr.map(x=>x.low)||[cur])));
-  }
-
-  // refresh sidebar & portfolio prices
-  function refreshUiPrices(){
-    // refresh prices in market list
-    renderMarketList();
-    renderPortfolio();
-    updateUiPriceDisplay();
-  }
-
-  // TF buttons behavior
-  document.querySelectorAll('.tf').forEach(el => el.addEventListener('click', (e) => {
-    document.querySelectorAll('.tf').forEach(t=>t.style.background='rgba(255,255,255,0.02)');
-    e.currentTarget.style.background='rgba(255,255,255,0.06)';
-    selectedTF = e.currentTarget.dataset.tf;
-    const mins = tfToMins(selectedTF);
-    buildInitialCandles(selectedSymbol, mins, 120);
-    initChartFor(selectedSymbol, mins);
-  }));
-  // default select first tf visually
-  document.querySelectorAll('.tf')[0].style.background='rgba(255,255,255,0.06)';
-
-  // menu toggle for mobile slide
-  menuToggle.addEventListener('click', openSlideMenu);
-  closeSlide.addEventListener('click', closeSlideMenu);
-  overlay.addEventListener('click', closeSlideMenu);
-  function openSlideMenu(){ overlay.style.display='block'; slide.style.display='block'; setTimeout(()=>{ overlay.style.opacity=1; },10); }
-  function closeSlideMenu(){ overlay.style.display='none'; slide.style.display='none'; overlay.style.opacity=0; }
-
-  // settings button: toggles data source (simulate/binance)
-  settingsBtn.addEventListener('click', () => {
-    const v = dataSourceSelect.value;
-    const html = `<div class="small">Data Source</div>
-                  <div style="margin-top:8px">
-                    <select id="modalDataSource" style="width:100%;padding:8px;border-radius:8px;background:transparent;border:1px solid rgba(255,255,255,0.04)">
-                      <option value="sim" ${v==='sim'?'selected':''}>Simulated global updates</option>
-                      <option value="binance" ${v==='binance'?'selected':''}>Binance public trade (selected symbol)</option>
-                    </select>
-                  </div>
-                  <div style="margin-top:12px" class="small">Note: Binance public feed only updates the selected symbol's price in real-time; trading remains demo-only.</div>
-                  <div style="margin-top:12px;display:flex;gap:8px"><button id="saveSettings" class="btn">Save</button> <button id="cancelSettings" class="btn">Cancel</button></div>`;
-    showModal('Settings', html);
-    document.getElementById('saveSettings').addEventListener('click', ()=> {
-      const sel = document.getElementById('modalDataSource').value;
-      dataSourceSelect.value = sel;
-      if(sel === 'binance') enableBinanceForSymbol(selectedSymbol); else disableBinance();
-      closeModalFn();
-    });
-    document.getElementById('cancelSettings').addEventListener('click', closeModalFn);
-  });
-
-  // modal helpers
-  function showModal(title, html){ modalTitle.textContent = title; modalBody.innerHTML = html; modal.style.display='block'; modalShield.style.display='block'; }
-  function closeModalFn(){ modal.style.display='none'; modalShield.style.display='none'; }
-  closeModal.addEventListener('click', closeModalFn);
-  modalShield.addEventListener('click', closeModalFn);
-
-  // Orders UI
-  function populateOrderSymbolSelect(){
-    const sel = document.getElementById('orderSymbol');
-    sel.innerHTML = '';
-    MARKETS.forEach(m => {
-      const opt = document.createElement('option'); opt.value = m.symbol; opt.textContent = m.symbol;
-      sel.appendChild(opt);
-    });
-  }
-
-  // place order (market)
-  document.getElementById('placeOrder').addEventListener('click', () => {
-    const sym = document.getElementById('orderSymbol').value;
-    const qty = parseFloat(document.getElementById('orderQty').value);
-    if(!qty || qty <= 0){ alert('Enter qty'); return; }
-    const side = 'buy'; // For simplicity treat place order as buy (user can sell via order entry with negative or separate UI)
-    placeMarketOrder(sym, side, qty);
-  });
-
-  // buy/sell buttons
-  document.getElementById('buyBtn').addEventListener('click', ()=> {
-    promptMarketOrder('buy');
-  });
-  document.getElementById('sellBtn').addEventListener('click', ()=> {
-    promptMarketOrder('sell');
-  });
-
-  function promptMarketOrder(side){
-    const html = `<div class="small">Symbol</div>
-                  <div style="margin-top:6px"><select id="quickSym" style="width:100%;padding:8px;border-radius:8px;background:transparent;border:1px solid rgba(255,255,255,0.04)">${MARKETS.map(m=>`<option value="${m.symbol}">${m.symbol}</option>`).join('')}</select></div>
-                  <div style="margin-top:8px"><div class="small">Quantity</div><input id="quickQty" type="text" style="width:100%;padding:8px;border-radius:8px;background:transparent;border:1px solid rgba(255,255,255,0.04)" /></div>
-                  <div style="margin-top:10px;display:flex;gap:8px"><button id="confirmQuick" class="btn">${side === 'buy' ? 'Buy' : 'Sell'}</button> <button id="cancelQuick" class="btn">Cancel</button></div>`;
-    showModal(side === 'buy' ? 'Buy' : 'Sell', html);
-    document.getElementById('confirmQuick').addEventListener('click', ()=>{
-      const sym = document.getElementById('quickSym').value;
-      const qty = parseFloat(document.getElementById('quickQty').value);
-      if(!qty || qty <= 0){ alert('Enter qty'); return; }
-      placeMarketOrder(sym, side, qty);
-      closeModalFn();
-    });
-    document.getElementById('cancelQuick').addEventListener('click', closeModalFn);
-  }
-
-  // place market order implementation
-  function placeMarketOrder(symbol, side, qty){
-    const user = currentUser();
-    if(!user){ alert('Not logged in'); return; }
-    const b = load(LS_KEYS.BALANCES) || {};
-    const my = b[user.email] || {};
-    const price = prices[symbol];
-    if(side === 'buy'){
-      const cost = price * qty;
-      const usdt = my['USDT'] || 0;
-      if(usdt < cost){ alert('Insufficient USDT'); return; }
-      // debit USDT
-      my['USDT'] = round(usdt - cost);
-      // credit base asset
-      const base = symbol.split('/')[0];
-      my[base] = (my[base] || 0) + qty;
-    } else if(side === 'sell'){
-      const base = symbol.split('/')[0];
-      const bal = my[base] || 0;
-      if(bal < qty){ alert('Insufficient asset'); return; }
-      my[base] = round(bal - qty);
-      const credit = price * qty;
-      my['USDT'] = (my['USDT'] || 0) + credit;
-    }
-    b[user.email] = my;
-    save(LS_KEYS.BALANCES, b);
-    // record order & trade
-    const orders = load(LS_KEYS.ORDERS) || [];
-    const trades = load(LS_KEYS.TRADES) || [];
-    const id = 'o' + Math.floor(Math.random()*1000000);
-    const now = nowSec();
-    orders.unshift({ id, user: user.email, symbol, side, qty, price, status:'filled', created_at: now });
-    trades.unshift({ id: 't' + Math.floor(Math.random()*1000000), orderId: id, user: user.email, symbol, side, qty, price, ts: now });
-    save(LS_KEYS.ORDERS, orders);
-    save(LS_KEYS.TRADES, trades);
-    renderPortfolio();
-    showToast('Order filled at ' + fmt(price) + ' USDT');
-    renderRecentTrades();
-  }
-
-  // Recent trades UI
-  function renderRecentTrades(){
-    const trades = load(LS_KEYS.TRADES) || [];
-    const html = trades.slice(0,8).map(t => `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.02)"><div><strong>${t.symbol}</strong><div class="small">${t.side} • ${t.qty}</div></div><div style="text-align:right"><div>${fmt(t.price)}</div><div class="small">${new Date(t.ts*1000).toLocaleString()}</div></div></div>`).join('');
-    document.getElementById('recentTrades').innerHTML = html || '<div class="small">No trades</div>';
-  }
-
-  // wallet & orders modals
-  document.getElementById('btnWallet').addEventListener('click', ()=> {
-    const user = currentUser();
-    if(!user) return;
-    const b = load(LS_KEYS.BALANCES) || {};
-    const my = b[user.email] || {};
-    const rows = Object.keys(my).map(asset => `<div style="display:flex;justify-content:space-between;padding:6px 0"><div>${asset}</div><div>${fmt(my[asset])}</div></div>`).join('');
-    showModal('Wallet', `<div class="small">Balances</div>${rows || '<div class="small">No balances</div>'}<div style="margin-top:8px"><button class="btn" id="closeWallet">Close</button></div>`);
-    document.getElementById('closeWallet').addEventListener('click', closeModalFn);
-  });
-
-  document.getElementById('btnOrders').addEventListener('click', ()=> {
-    const orders = load(LS_KEYS.ORDERS) || [];
-    const user = currentUser();
-    const myOrders = orders.filter(o=>o.user === user.email);
-    const html = myOrders.map(o => `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.02)"><div><strong>${o.symbol}</strong><div class="small">${o.side} • ${o.qty}</div></div><div style="text-align:right"><div>${fmt(o.price)}</div><div class="small">${new Date(o.created_at*1000).toLocaleString()}</div></div></div>`).join('');
-    showModal('Orders', html || '<div class="small">No orders</div>');
-  });
-
-  // toast simple
-  function showToast(msg){
-    const t = document.createElement('div');
-    t.textContent = msg; t.style.position='fixed'; t.style.left='50%'; t.style.transform='translateX(-50%)'; t.style.bottom='24px'; t.style.background='rgba(0,0,0,0.6)'; t.style.padding='10px 16px'; t.style.borderRadius='10px'; t.style.zIndex=999; document.body.appendChild(t);
-    setTimeout(()=>{ t.remove(); }, 2400);
-  }
-
-  // render recent trades initially
-  renderRecentTrades();
-
-  // update live UI regularly
-  setInterval(() => {
-    // update prices displayed in sidebar & chart
-    renderMarketList();
-    renderPortfolio();
-    updateUiPriceDisplay();
-  }, 1500);
-
-  // data source select handler (sim/binance)
-  dataSourceSelect.addEventListener('change', () => {
-    if(dataSourceSelect.value === 'binance') enableBinanceForSymbol(selectedSymbol); else disableBinance();
-  });
-
-  // Orders & trades persistence available in localStorage across reloads
-
-  // ---------------------------
-  // Small helpers & initial selection
-  // ---------------------------
-  // select default symbol on startup (first market)
-  selectSymbol(selectedSymbol);
-
-  // start simulation by default
-  startSimulation();
-
-  // helper to populate initial demo balances if no user
-  // (If you register, balances init occurs there)
-
-  // ---------------------------
-  // Cleanup when leaving page
-  // ---------------------------
-  window.addEventListener('beforeunload', () => {
-    if(binanceWs) { try{ binanceWs.close(); }catch(e){} }
-    if(simInterval) clearInterval(simInterval);
-  });
-
-  // ---------------------------
-  // End of script
-  // ---------------------------
+    // Notes:
+    // - This is a demo single-file app. For real production:
+    //   * Replace mock data with WebSocket/REST price feed
+    //   * Use proper routing and componentization (React/Vue)
+    //   * Securely handle user auth, wallets, and real trading endpoints
   </script>
 </body>
 </html>
