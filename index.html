@@ -2,683 +2,409 @@
 <html lang="my">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>WEEX-like Trading Demo — Full Single File</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>WEEX-like Trading (Frontend)</title>
+
+  <!-- Chart.js for price chart -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
   <style>
-    :root{
-      --bg:#070708;--panel:#0f0f10;--muted:#9aa0a6;--accent:#f3c623;
-      --green:#21c77a;--red:#ff5c6c;--glass:rgba(255,255,255,0.03);
-      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-    }
-    html,body{height:100%;margin:0;background:linear-gradient(180deg,#050506,#0b0b0b);color:#fff;-webkit-font-smoothing:antialiased}
-    .shell{max-width:480px;margin:0 auto;min-height:100vh;position:relative;overflow:hidden}
-    /* Splash */
-    .splash{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;background:linear-gradient(180deg,#0b0b0b,#070707);z-index:60}
-    .logo-big{width:120px;height:120px;border-radius:24px;background:linear-gradient(135deg,#f3c623,#ffb84d);display:flex;align-items:center;justify-content:center;font-weight:900;color:#0b0b0b;font-size:44px;box-shadow:0 8px 30px rgba(0,0,0,0.6)}
-    .loading-dots{display:flex;gap:6px;margin-top:18px}
-    .loading-dots span{width:8px;height:8px;background:#fff;border-radius:50%;opacity:0.2;animation:blink 1s infinite}
-    .loading-dots span:nth-child(2){animation-delay:0.12s}
-    .loading-dots span:nth-child(3){animation-delay:0.24s}
-    @keyframes blink{0%{opacity:.2;transform:translateY(0)}50%{opacity:1;transform:translateY(-6px)}100%{opacity:.2;transform:translateY(0)}}
-
-    /* Overlay / Modal */
-    .overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);display:none;align-items:center;justify-content:center;z-index:80}
-    .modal{width:92%;max-width:520px;background:linear-gradient(180deg,#0d0d0d,#0b0b0b);border-radius:12px;padding:18px}
-    .field{margin:8px 0}
-    .field input, .field select{width:100%;padding:10px;border-radius:10px;border:0;background:rgba(255,255,255,0.03);color:#fff}
-    .btn{background:var(--accent);color:#0b0b0b;padding:10px 14px;border-radius:999px;border:0;font-weight:700;cursor:pointer}
-    .btn.ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:#fff}
-
-    /* App main */
-    .app{padding:12px 12px 140px;min-height:100vh;box-sizing:border-box;opacity:0;transform:translateY(8px);transition:all .35s ease}
-    .topbar{display:flex;align-items:center;gap:12px;padding:8px 6px}
-    .logo{width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,#f3c623,#ffb84d);display:flex;align-items:center;justify-content:center;font-weight:700;color:#111}
-    .brand{display:flex;flex-direction:column}
-    .download{margin-left:auto;background:var(--accent);color:#0b0b0b;padding:6px 14px;border-radius:999px;font-weight:700}
-    .authBtn{width:100%;display:block;margin:10px auto 12px;padding:10px;border-radius:999px;background:transparent;border:1px solid rgba(255,255,255,0.06);color:#fff;text-align:center}
-
-    .tabs{display:flex;gap:14px;overflow:auto;padding:6px 3px 12px}
-    .tabs button{background:transparent;border:0;color:#cdd3d9;font-weight:700;padding:6px 8px;font-size:15px;cursor:pointer}
-    .tabs button.active{color:#fff;position:relative}
-    .tabs button.active::after{content:"";position:absolute;left:0;bottom:-8px;height:3px;background:var(--accent);width:100%;border-radius:3px}
-    .subfilter{display:flex;gap:8px;padding:10px 4px}
-    .pill{background:var(--glass);padding:8px 12px;border-radius:18px;color:#ddd;font-weight:700;cursor:pointer}
-    .pill.active{background:#222;color:#fff}
-
-    .row{display:flex;gap:8px;align-items:center}
-    .page{margin-top:6px}
-
-    /* Trader layout */
-    .trade-grid{display:grid;grid-template-columns:1fr;gap:12px}
-    @media(min-width:900px){ .trade-grid{grid-template-columns: 1fr 360px} .app{padding-bottom:40px} }
-
-    .panel{background:linear-gradient(180deg,#0e0e0e,#0c0c0c);padding:12px;border-radius:12px}
-    .chart-area{border-radius:12px;overflow:hidden}
-    canvas{width:100%!important;height:260px!important}
-
-    .market-list .item{display:flex;justify-content:space-between;align-items:center;padding:12px;border-bottom:1px solid rgba(255,255,255,0.03);cursor:pointer;border-radius:8px}
-    .market-list .item.selected{background:rgba(243,198,35,0.04)}
-    .market-left{display:flex;gap:10px;align-items:center}
-    .icon{width:44px;height:44px;border-radius:12px;background:#111;display:flex;align-items:center;justify-content:center;font-size:18px}
-    .symbol{font-weight:800}
-    .badge{background:#222;color:#ddd;padding:4px 8px;border-radius:8px;font-size:12px;margin-left:6px}
-    .percent.up{color:var(--green)} .percent.down{color:var(--red)}
-
-    .orderbook{display:flex;gap:12px}
-    .book-side{flex:1;max-height:180px;overflow:auto}
-    .book-row{display:flex;justify-content:space-between;padding:6px 8px;border-radius:6px}
-    .book-row.bid{background:linear-gradient(90deg, rgba(33,199,122,0.04), transparent)}
-    .book-row.ask{background:linear-gradient(90deg, rgba(255,92,108,0.03), transparent)}
-
-    .order-entry{display:flex;flex-direction:column;gap:8px}
-    .segmented{display:flex;gap:8px}
-    .segmented button{flex:1;padding:8px;border-radius:10px;border:0;background:rgba(255,255,255,0.03);color:#fff;cursor:pointer}
-    .segmented button.active{background:var(--accent);color:#000}
-
-    .trade-actions{display:flex;gap:8px}
-    .buy{background:var(--green);border:0;padding:10px;border-radius:10px;color:#000;font-weight:800;flex:1;cursor:pointer}
-    .sell{background:var(--red);border:0;padding:10px;border-radius:10px;color:#fff;font-weight:800;flex:1;cursor:pointer}
-
-    .orders-list{margin-top:8px;max-height:160px;overflow:auto}
-    .order-row{display:flex;justify-content:space-between;padding:8px;border-radius:8px;margin-bottom:6px;background:rgba(255,255,255,0.02)}
-
-    .bottom-nav{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;background:linear-gradient(180deg,#161616,#0f0f0f);border-radius:40px;padding:10px 16px;box-shadow:0 6px 30px rgba(0,0,0,0.6);display:flex;gap:18px;align-items:center;z-index:40;max-width:480px}
-    .nav-item{display:flex;flex-direction:column;align-items:center;color:#aaa;font-size:12px;background:transparent;border:0;padding:8px 10px;border-radius:12px}
-    .nav-item.active{background:rgba(255,255,255,0.03);color:#fff}
-
-    .small{font-size:12px;color:var(--muted)}
-    .muted{color:var(--muted)}
-    .hidden{display:none}
-    .pill-inline{display:flex;gap:6px;align-items:center}
-
-    .top-user{display:flex;gap:8px;align-items:center}
-    .logout{background:transparent;border:1px solid rgba(255,255,255,0.06);padding:6px 8px;border-radius:8px;color:#fff;cursor:pointer}
+    :root{ --bg:#071029; --card:#0b1220; --accent:#2dd4bf; --muted:#94a3b8; --text:#e6eef6; }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial;background:linear-gradient(180deg,#071029,#041022);color:var(--text)}
+    .wrap{max-width:1200px;margin:16px auto;padding:12px}
+    header{display:flex;align-items:center;justify-content:space-between;padding:8px 0}
+    header h1{margin:0;font-size:1.2rem}
+    .top-actions{display:flex;gap:8px;align-items:center}
+    .btn{background:var(--accent);color:#032;padding:8px 10px;border-radius:8px;border:none;cursor:pointer}
+    .card{background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));padding:12px;border-radius:10px;margin-bottom:12px;border:1px solid rgba(255,255,255,0.03)}
+    .grid{display:grid;grid-template-columns:2fr 1fr;gap:12px}
+    .row{display:flex;gap:8px}
+    .muted{color:var(--muted);font-size:0.9rem}
+    .small{font-size:0.85rem;color:var(--muted)}
+    input,select,textarea{background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04);color:var(--text);padding:8px;border-radius:6px}
+    .field{display:flex;flex-direction:column;gap:6px;margin-bottom:8px}
+    #chart{height:320px;width:100%}
+    table{width:100%;border-collapse:collapse}
+    table th, table td{padding:6px;border-bottom:1px dashed rgba(255,255,255,0.03);text-align:left}
+    .green{color:#7ee787} .red{color:#ff8aa1}
+    .address{display:flex;align-items:center;gap:8px}
+    .copy-btn{padding:6px 8px;background:#223344;border-radius:6px;border:1px solid rgba(255,255,255,0.03);cursor:pointer;color:var(--muted)}
+    footer{margin-top:12px;color:var(--muted);font-size:0.85rem}
+    @media (max-width:900px){ .grid{grid-template-columns:1fr} }
   </style>
 </head>
 <body>
-  <div class="shell" id="shell">
-    <!-- Splash -->
-    <div class="splash" id="splash">
-      <div class="logo-big">W</div>
-      <small class="muted">WEEX-like Trading Demo</small>
-      <div class="loading-dots"><span></span><span></span><span></span></div>
-    </div>
-
-    <!-- Overlay modal -->
-    <div class="overlay" id="overlay">
-      <div class="modal" id="modal"></div>
-    </div>
-
-    <!-- Main app -->
-    <div class="app" id="app">
-      <div class="topbar">
-        <div class="logo">W</div>
-        <div class="brand">
-          <div id="brandTitle" style="font-weight:800">WEEX Demo</div>
-          <div class="small muted" id="userEmail">guest</div>
-        </div>
-        <div class="top-user" style="margin-left:auto">
-          <button id="authBtn" class="authBtn">Sign Up / Login</button>
-          <button id="logoutBtn" class="logout hidden">Logout</button>
-        </div>
-        <div class="download" id="downloadBtn" style="margin-left:12px">Download</div>
+  <div class="wrap">
+    <header>
+      <h1>WEEX-like Trading</h1>
+      <div class="top-actions">
+        <button id="connectWallet" class="btn">Connect MetaMask</button>
+        <button id="loginBtn" class="btn">Login</button>
       </div>
+    </header>
 
-      <div class="tabs" id="mainTabs">
-        <button class="active" data-tab="hot">Hot</button>
-        <button data-tab="gainers">Gainers</button>
-        <button data-tab="losers">Losers</button>
-        <button data-tab="trending">Trending</button>
-        <button data-tab="listing">Listing</button>
-      </div>
-
-      <div class="subfilter">
-        <div class="pill active" data-filter="futures">Futures</div>
-        <div class="pill" data-filter="tradfi">TradFi</div>
-        <div class="pill" data-filter="spot">Spot</div>
-      </div>
-
-      <div class="page">
-        <div class="trade-grid">
-          <!-- Left: chart + market list -->
-          <div>
-            <div class="panel chart-area" id="chartPanel">
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-                <div>
-                  <div style="font-weight:800" id="chartSymbol">BTCUSDT</div>
-                  <div class="small muted" id="chartSub">79,999.9 • <span id="chartChange" class="small">+2.07%</span></div>
-                </div>
-                <div class="pill-inline">
-                  <select id="timeframe" style="background:transparent;border:0;color:#fff;padding:6px;border-radius:8px">
-                    <option value="1m">1m</option><option value="5m">5m</option><option value="1h">1h</option><option value="1d">1d</option>
-                  </select>
-                </div>
-              </div>
-              <canvas id="candleChart"></canvas>
+    <!-- Main grid: chart + orderbook/trading -->
+    <div class="grid">
+      <div>
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <div class="muted">Pair</div>
+              <h2 id="pairTitle">BTC / USD</h2>
             </div>
-
-            <div class="panel market-list" style="margin-top:12px">
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-                <div style="font-weight:800">Markets</div>
-                <div class="small muted">Live (sim)</div>
-              </div>
-              <div id="marketList"></div>
+            <div style="text-align:right">
+              <div class="small">Last Price</div>
+              <div id="lastPrice" style="font-size:1.4rem">--</div>
+              <div class="small muted" id="priceChange">—</div>
             </div>
           </div>
 
-          <!-- Right: order entry, book, orders -->
-          <div>
-            <div class="panel">
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-                <div style="font-weight:800">Trade</div>
-                <div class="small muted">Balance: <span id="balance">1000.00 USDT</span></div>
+          <div id="chart" style="margin-top:10px">
+            <canvas id="priceChart"></canvas>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:10px">
+          <h3>Place Order</h3>
+          <div class="row" style="gap:12px">
+            <div style="flex:1">
+              <div class="field">
+                <label>Side</label>
+                <select id="side"><option value="buy">Buy</option><option value="sell">Sell</option></select>
               </div>
-
-              <div class="order-entry">
-                <div class="segmented" id="ordTypeSeg">
-                  <button class="active" data-type="market">Market</button>
-                  <button data-type="limit">Limit</button>
-                </div>
-
-                <div style="display:flex;gap:8px">
-                  <select id="side" style="flex:1;background:rgba(255,255,255,0.03);border-radius:8px;padding:8px;border:0;color:#fff">
-                    <option value="buy">Buy</option><option value="sell">Sell</option>
-                  </select>
-                  <select id="leverage" style="width:120px;background:rgba(255,255,255,0.03);border-radius:8px;padding:8px;border:0;color:#fff">
-                    <option>1x</option><option>3x</option><option>10x</option><option>50x</option><option>100x</option>
-                  </select>
-                </div>
-
-                <div class="field" id="priceField" style="display:none"><input id="priceInput" placeholder="Price (USDT)" type="number" step="0.0001" /></div>
-                <div class="field"><input id="qtyInput" placeholder="Amount (coin)" type="number" step="0.0001" /></div>
-
-                <div style="display:flex;gap:8px">
-                  <button class="buy" id="buyBtn">Buy</button>
-                  <button class="sell" id="sellBtn">Sell</button>
-                </div>
-
-                <div class="small muted" style="margin-top:6px">Tip: use Market type to execute at current price. Limit will place order into orderbook.</div>
+              <div class="field">
+                <label>Price (USD)</label>
+                <input id="price" type="number" step="0.01" />
               </div>
+              <div class="field">
+                <label>Amount (BTC)</label>
+                <input id="amount" type="number" step="0.000001" />
+              </div>
+              <div class="row">
+                <button id="submitOrder" class="btn">Submit</button>
+                <button id="marketOrder" class="btn" style="background:#ff9f43">Market</button>
+              </div>
+              <div id="orderMsg" class="small muted" style="margin-top:8px"></div>
             </div>
 
-            <div class="panel" style="margin-top:12px">
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-                <div style="font-weight:800">Order Book</div>
-                <div class="small muted">Depth (sim)</div>
-              </div>
-              <div class="orderbook">
-                <div class="book-side" id="asks"></div>
-                <div class="book-side" id="bids"></div>
-              </div>
-              <div style="height:120px;margin-top:8px">
-                <canvas id="depthChart"></canvas>
-              </div>
-            </div>
-
-            <div class="panel" style="margin-top:12px">
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-                <div style="font-weight:800">Orders</div>
-                <div class="small muted">Open / Filled</div>
-              </div>
-              <div class="orders-list" id="ordersList"></div>
+            <div style="width:320px">
+              <h4>Orderbook</h4>
+              <table id="orderbook">
+                <thead><tr><th>Price</th><th>Amount</th></tr></thead>
+                <tbody id="orderbookBody">
+                  <!-- filled by JS -->
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
+
+        <div class="card">
+          <h3>Trade History</h3>
+          <table id="trades">
+            <thead><tr><th>Time</th><th>Price</th><th>Amount</th></tr></thead>
+            <tbody id="tradesBody"></tbody>
+          </table>
+        </div>
       </div>
+
+      <aside>
+        <div class="card">
+          <h3>Account & KYC</h3>
+          <div id="acctInfo">
+            <div class="small">Status: <span id="kycStatus" class="muted">Not submitted</span></div>
+            <div style="margin-top:8px">
+              <form id="kycForm">
+                <div class="field"><label>Full name</label><input id="fullname" name="fullname" required></div>
+                <div class="field"><label>ID type</label><select id="idtype" name="idtype"><option>Passport</option><option>National ID</option></select></div>
+                <div class="field"><label>Upload ID (image/pdf)</label><input type="file" id="idfile" name="idfile" accept="image/*,application/pdf" required></div>
+                <div class="row"><button type="submit" class="btn">Submit KYC</button></div>
+                <div id="kycMsg" class="small muted" style="margin-top:6px"></div>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:12px">
+          <h3>Deposits</h3>
+          <div class="small">Send only BTC to the BTC address below (no other coin/token).</div>
+          <div class="address" style="margin-top:8px">
+            <div style="flex:1">
+              <div class="small muted">BTC deposit</div>
+              <div style="word-break:break-all;font-weight:600;margin-top:6px" id="btcAddress">bc1qq9t2mrc2pmhf7rfvkuf0fd8j7uc0qs8w82wt05</div>
+              <div style="margin-top:6px"><button class="copy-btn" data-addr="btc">Copy</button>
+                <a class="copy-btn" target="_blank" id="btcQr">QR</a>
+              </div>
+            </div>
+          </div>
+
+          <div style="height:12px"></div>
+
+          <div class="address">
+            <div style="flex:1">
+              <div class="small muted">ETH deposit (ERC-20)</div>
+              <div style="word-break:break-all;font-weight:600;margin-top:6px" id="ethAddress">0x006A674fe0e05d704E95a05573233358565FCac4</div>
+              <div style="margin-top:6px"><button class="copy-btn" data-addr="eth">Copy</button>
+                <a class="copy-btn" target="_blank" id="ethQr">QR</a>
+              </div>
+            </div>
+          </div>
+
+          <div class="small muted" style="margin-top:8px">Deposits are credited after required confirmations (backend monitors blockchain).</div>
+        </div>
+
+        <div class="card" style="margin-top:12px">
+          <h3>Withdraw</h3>
+          <form id="withdrawForm">
+            <div class="field"><label>Currency</label><select id="wcur"><option>BTC</option><option>ETH</option></select></div>
+            <div class="field"><label>To address</label><input id="waddr" required></div>
+            <div class="field"><label>Amount</label><input id="wamount" type="number" step="0.000001" required></div>
+            <div class="row"><button class="btn" type="submit">Request Withdraw</button></div>
+            <div id="withdrawMsg" class="small muted" style="margin-top:6px"></div>
+          </form>
+        </div>
+
+        <div class="card" style="margin-top:12px">
+          <h4>System Info</h4>
+          <div class="small">Backend endpoints (replace with your server):</div>
+          <ul class="small muted">
+            <li>/api/kyc/submit (POST multipart/form-data)</li>
+            <li>/api/deposit_addresses (GET)</li>
+            <li>/api/orders (POST)</li>
+            <li>/api/withdrawals (POST)</li>
+            <li>ws://your-server/ws/prices (WebSocket price feed)</li>
+            <li>ws://your-server/ws/orderbook (WebSocket orderbook)</li>
+          </ul>
+        </div>
+      </aside>
     </div>
 
-    <div class="bottom-nav" id="bottomNav">
-      <button class="nav-item active" data-name="home">🏠<span style="margin-top:6px">Home</span></button>
-      <button class="nav-item" data-name="markets">📈<span style="margin-top:6px">Markets</span></button>
-      <button class="nav-item" data-name="futures">🧾<span style="margin-top:6px">Futures</span></button>
-      <button class="nav-item" data-name="trade">🔁<span style="margin-top:6px">Trade</span></button>
-      <button class="nav-item" data-name="assets">💼<span style="margin-top:6px">Assets</span></button>
-    </div>
+    <footer>
+      <div class="small muted">This frontend is a template. Do not use in production without backend, security, and legal compliance.</div>
+    </footer>
   </div>
 
-  <!-- Chart.js (v3) and financial plugin -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial@3.3.0/dist/chartjs-chart-financial.min.js"></script>
-
   <script>
-    /* ----------------------
-       Demo/Simulated engine
-       ---------------------- */
-    // Markets with base price & simple orderbook
-    const markets = [
-      {id:'BTCUSDT', name:'BTC', icon:'🟠', price:79999.9, step:1},
-      {id:'ETHUSDT', name:'ETH', icon:'🔷', price:2500.67, step:0.1},
-      {id:'SOLUSDT', name:'SOL', icon:'🟣', price:109.24, step:0.01},
-      {id:'COWUSDT', name:'COW', icon:'🐮', price:0.04871, step:0.000001}
-    ];
+    // ------- Config / Addresses -------
+    const CONFIG = {
+      pair: 'BTC/USD',
+      btcAddress: 'bc1qq9t2mrc2pmhf7rfvkuf0fd8j7uc0qs8w82wt05',
+      ethAddress: '0x006A674fe0e05d704E95a05573233358565FCac4',
+      wsPrices: 'ws://localhost:4000/ws/prices', // replace with real WS
+      wsOrderbook: 'ws://localhost:4000/ws/orderbook',
+      apiBase: '/api' // replace with real backend base URL
+    };
 
-    // State
-    let activeMarket = markets[0].id;
-    let oType = 'market'; // market/limit
-    let balance = 1000.00; // USDT
-    let orders = []; // orders history
-    let candleSeries = {}; // per-market OHLC arrays
-    let orderbook = {}; // bids/asks arrays for each market
-    let depthChart = null, candleChart = null;
+    // ------- Simple UI wiring -------
+    document.getElementById('btcAddress').textContent = CONFIG.btcAddress;
+    document.getElementById('ethAddress').textContent = CONFIG.ethAddress;
 
-    // DOM
-    const splash = document.getElementById('splash');
-    const app = document.getElementById('app');
-    const overlay = document.getElementById('overlay');
-    const modal = document.getElementById('modal');
-    const marketListEl = document.getElementById('marketList');
-    const chartSymbolEl = document.getElementById('chartSymbol');
-    const chartSubEl = document.getElementById('chartSub');
-    const chartChangeEl = document.getElementById('chartChange');
-    const bidsEl = document.getElementById('bids');
-    const asksEl = document.getElementById('asks');
-    const ordersListEl = document.getElementById('ordersList');
-    const balanceEl = document.getElementById('balance');
-    const authBtn = document.getElementById('authBtn');
-    const logoutBtn = document.getElementById('logoutBtn');
+    // QR links (simple external qr generator)
+    document.getElementById('btcQr').href = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(CONFIG.btcAddress)}`;
+    document.getElementById('ethQr').href = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(CONFIG.ethAddress)}`;
 
-    // Inputs
-    const ordTypeSeg = document.getElementById('ordTypeSeg');
-    const priceField = document.getElementById('priceField');
-    const priceInput = document.getElementById('priceInput');
-    const qtyInput = document.getElementById('qtyInput');
-    const sideSelect = document.getElementById('side');
-    const buyBtn = document.getElementById('buyBtn');
-    const sellBtn = document.getElementById('sellBtn');
-    const timeframeSel = document.getElementById('timeframe');
+    document.querySelectorAll('.copy-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const type = btn.getAttribute('data-addr');
+        const addr = type === 'btc' ? CONFIG.btcAddress : CONFIG.ethAddress;
+        try {
+          await navigator.clipboard.writeText(addr);
+          btn.textContent = 'Copied';
+          setTimeout(()=> btn.textContent = 'Copy', 1200);
+        } catch (err) {
+          alert('Copy failed: ' + err.message);
+        }
+      });
+    });
 
-    // Utility
-    function formatPrice(v){
-      if(!isFinite(v)) return v;
-      if(Math.abs(v) >= 1000) return new Intl.NumberFormat().format(Math.round(v*100)/100);
-      if(Math.abs(v) >= 1) return (Math.round(v*10000)/10000).toString();
-      return v.toPrecision(6);
+    // ------- Price chart (mock + update function) -------
+    const ctx = document.getElementById('priceChart').getContext('2d');
+    let priceChart = new Chart(ctx, {
+      type: 'line',
+      data: { labels: [], datasets: [{label:'Price', data:[], borderColor:'#7ee787', backgroundColor:'rgba(126,231,135,0.06)', tension:0.2}] },
+      options: { animation:false, scales:{ x:{ ticks:{color:'#cbd5e1'} }, y:{ ticks:{color:'#cbd5e1'} } }, plugins:{legend:{display:false}}}
+    });
+
+    let lastPrice = 30000;
+    function pushPrice(p, ts=new Date()){
+      const labels = priceChart.data.labels;
+      const ds = priceChart.data.datasets[0].data;
+      labels.push(ts.toLocaleTimeString());
+      ds.push(p);
+      if(labels.length>60){ labels.shift(); ds.shift(); }
+      priceChart.update();
+      document.getElementById('lastPrice').textContent = p.toFixed(2);
+      const change = ((p - lastPrice) / lastPrice) * 100;
+      const chEl = document.getElementById('priceChange');
+      chEl.textContent = (change >= 0 ? '+' : '') + change.toFixed(2) + '%';
+      chEl.className = change >= 0 ? 'green' : 'red';
+      lastPrice = p;
     }
 
-    // INIT
-    function init(){
-      // prepare candle & orderbook
-      markets.forEach(m=>{
-        candleSeries[m.id] = buildInitialOHLC(m.price);
-        orderbook[m.id] = buildOrderbook(m.price, m.step);
+    // mock price feed (for demo UI). Replace with real WebSocket handler.
+    setInterval(()=> {
+      const jitter = (Math.random()-0.5) * 200;
+      const newp = Math.max(10, lastPrice + jitter);
+      pushPrice(newp);
+    }, 1500);
+
+    // ------- Mock orderbook and trades (UI only) -------
+    const orderbookBody = document.getElementById('orderbookBody');
+    const tradesBody = document.getElementById('tradesBody');
+    function renderOrderbook(){
+      // simple mock data
+      const asks = [
+        [lastPrice + 150, 0.12],
+        [lastPrice + 300, 0.5],
+        [lastPrice + 450, 1.2]
+      ];
+      const bids = [
+        [lastPrice - 120, 0.08],
+        [lastPrice - 260, 0.4],
+        [lastPrice - 420, 0.9]
+      ];
+      const rows = [];
+      asks.forEach(a => rows.push({price:a[0],amount:a[1],side:'sell'}));
+      bids.forEach(b => rows.push({price:b[0],amount:b[1],side:'buy'}));
+      orderbookBody.innerHTML = '';
+      rows.sort((a,b)=>b.price - a.price).forEach(r => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td class="${r.side==='buy'?'green':'red'}">${r.price.toFixed(2)}</td><td>${r.amount}</td>`;
+        orderbookBody.appendChild(tr);
       });
+    }
+    setInterval(renderOrderbook, 2000);
 
-      // initial render
-      renderMarketList();
-      selectMarket(activeMarket);
-      renderOrders();
-      updateBalanceUI();
+    function addTrade(price, amount){
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${new Date().toLocaleTimeString()}</td><td>${price.toFixed(2)}</td><td>${amount}</td>`;
+      tradesBody.prepend(tr);
+      if(tradesBody.children.length > 200) tradesBody.removeChild(tradesBody.lastChild);
+    }
+    // mock trade stream
+    setInterval(()=> addTrade(lastPrice + (Math.random()-0.5)*100, (Math.random()*0.5).toFixed(6)), 5000);
 
-      // show app after splash
-      setTimeout(()=>{ splash.style.display='none'; app.style.opacity='1'; app.style.transform='translateY(0)'; }, 700);
-
-      // wire UI
-      ordTypeSeg.querySelectorAll('button').forEach(b=>{
-        b.addEventListener('click', ()=>{
-          ordTypeSeg.querySelectorAll('button').forEach(x=>x.classList.remove('active'));
-          b.classList.add('active');
-          oType = b.dataset.type;
-          priceField.style.display = (oType === 'limit') ? 'block' : 'none';
+    // ------- Order submission (calls backend) -------
+    document.getElementById('submitOrder').addEventListener('click', async ()=>{
+      const side = document.getElementById('side').value;
+      const price = Number(document.getElementById('price').value);
+      const amount = Number(document.getElementById('amount').value);
+      const msg = document.getElementById('orderMsg');
+      if(!price || !amount){ msg.textContent = 'Enter price and amount'; return; }
+      msg.textContent = 'Submitting...';
+      try {
+        // Replace with real authenticated API call
+        const res = await fetch(CONFIG.apiBase + '/orders', {
+          method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({pair:CONFIG.pair,side,price,amount})
         });
-      });
+        if(!res.ok) throw new Error('server error');
+        const data = await res.json();
+        msg.textContent = 'Order placed: id ' + (data.orderId || '(mock)');
+      } catch (err){
+        msg.textContent = 'Order submit failed: ' + err.message;
+      }
+    });
 
-      buyBtn.addEventListener('click', ()=>placeOrder('buy'));
-      sellBtn.addEventListener('click', ()=>placeOrder('sell'));
-      authBtn.addEventListener('click', ()=>openAuthModal());
-      logoutBtn.addEventListener('click', ()=>logout());
-
-      document.getElementById('downloadBtn').addEventListener('click', ()=>alert('Download (demo)'));
-
-      // bottom nav
-      document.querySelectorAll('.nav-item').forEach(btn=>{
-        btn.addEventListener('click', ()=>{
-          document.querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active'));
-          btn.classList.add('active');
-          const name = btn.getAttribute('data-name');
-          if(name === 'home') window.scrollTo({top:0,behavior:'smooth'});
-          else if(name === 'markets') document.querySelector('.market-list').scrollIntoView({behavior:'smooth'});
-          else if(name === 'trade') document.getElementById('chartPanel').scrollIntoView({behavior:'smooth'});
-          else if(name === 'futures'){
-            document.querySelectorAll('.pill').forEach(x=>x.classList.remove('active'));
-            document.querySelector('.pill[data-filter="futures"]').classList.add('active');
-            renderMarketList();
-          } else if(name === 'assets'){
-            alert('Assets screen — demo only');
-          }
+    // Market order quick action (calls backend with market flag)
+    document.getElementById('marketOrder').addEventListener('click', async ()=>{
+      const side = document.getElementById('side').value;
+      const amount = Number(document.getElementById('amount').value);
+      const msg = document.getElementById('orderMsg');
+      if(!amount){ msg.textContent = 'Enter amount'; return; }
+      msg.textContent = 'Submitting market order...';
+      try {
+        const res = await fetch(CONFIG.apiBase + '/orders', {
+          method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({pair:CONFIG.pair,side,amount,market:true})
         });
-      });
-
-      // chart setup
-      createCandleChart(candleSeries[activeMarket]);
-      createDepthChart(orderbook[activeMarket]);
-
-      timeframeSel.addEventListener('change', ()=>{
-        // for demo, regenerate a new series with different granularity
-        candleSeries[activeMarket] = buildInitialOHLC(getMarket(activeMarket).price);
-        createCandleChart(candleSeries[activeMarket]);
-      });
-
-      // market ticks
-      setInterval(simulateMarketTick, 1200);
-      setInterval(simulateOrderbookShifts, 900);
-
-      // check auth state
-      restoreAuthState();
-    }
-
-    // Markets helpers
-    function getMarket(id){ return markets.find(m=>m.id===id); }
-
-    // Initial OHLC generator (array of {t,o,h,l,c})
-    function buildInitialOHLC(base){
-      const len = 60;
-      const arr = [];
-      let last = base;
-      for(let i=0;i<len;i++){
-        const o = last;
-        const c = Math.max(0.0000001, o + (Math.random()-0.5)*(base*0.01));
-        const h = Math.max(o,c) + Math.random()*(base*0.005);
-        const l = Math.min(o,c) - Math.random()*(base*0.005);
-        arr.push({t: Date.now() - (len-i)*60000, o: +o.toFixed(8), h: +h.toFixed(8), l: +l.toFixed(8), c: +c.toFixed(8)});
-        last = c;
+        if(!res.ok) throw new Error('server error');
+        const data = await res.json();
+        msg.textContent = 'Market order executed: ' + (data.executedPrice || '(mock)');
+      } catch (err){
+        msg.textContent = 'Market submit failed: ' + err.message;
       }
-      return arr;
-    }
+    });
 
-    // Orderbook builder: arrays of [price,size]
-    function buildOrderbook(mid, step){
-      const bids = [], asks = [];
-      for(let i=1;i<=30;i++){
-        const priceB = +(mid - i*step*(1 + Math.random()*0.6)).toFixed(8);
-        const priceA = +(mid + i*step*(1 + Math.random()*0.6)).toFixed(8);
-        bids.push([priceB, +(Math.random()*5).toFixed(4)]);
-        asks.push([priceA, +(Math.random()*5).toFixed(4)]);
-      }
-      return {bids, asks};
-    }
-
-    // Render market list
-    function renderMarketList(){
-      marketListEl.innerHTML = '';
-      markets.forEach(m=>{
-        const div = document.createElement('div');
-        div.className = 'item' + (m.id===activeMarket ? ' selected' : '');
-        div.innerHTML = `<div class="market-left"><div class="icon">${m.icon}</div><div><div class="symbol">${m.name}</div><div class="small muted">${m.id}</div></div></div><div style="text-align:right"><div style="font-weight:800">${formatPrice(m.price)}</div><div class="small percent ${(Math.random()>0.5)?'up':'down'}">${(Math.random()*6).toFixed(2)}%</div></div>`;
-        div.addEventListener('click', ()=>selectMarket(m.id));
-        marketListEl.appendChild(div);
-      });
-    }
-
-    // Select market
-    function selectMarket(id){
-      activeMarket = id;
-      renderMarketList();
-      const m = getMarket(id);
-      chartSymbolEl.textContent = m.id;
-      chartSubEl.innerHTML = `${formatPrice(m.price)} • <span id="chartChange" class="small ${(Math.random()>0.5)?'up':'down'}">${(Math.random()*6).toFixed(2)}%</span>`;
-      // rebuild / show charts
-      createCandleChart(candleSeries[id]);
-      createDepthChart(orderbook[id]);
-    }
-
-    // Create candlestick chart (uses chartjs-chart-financial)
-    function createCandleChart(series){
-      const ctx = document.getElementById('candleChart').getContext('2d');
-      if(candleChart) candleChart.destroy();
-      candleChart = new Chart(ctx, {
-        type: 'candlestick',
-        data: {datasets: [{label:'Price', data: series}]},
-        options: {
-          plugins:{legend:{display:false},tooltip:{enabled:true}},
-          scales:{x:{type:'time',time:{unit:'minute'},ticks:{color:'#aaa'}}, y:{ticks:{color:'#aaa'}}}
+    // ------- KYC submission -------
+    document.getElementById('kycForm').addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const form = e.target;
+      const fd = new FormData();
+      fd.append('fullname', document.getElementById('fullname').value);
+      fd.append('idtype', document.getElementById('idtype').value);
+      const file = document.getElementById('idfile').files[0];
+      if(!file){ document.getElementById('kycMsg').textContent = 'Select a file'; return; }
+      fd.append('id_file', file);
+      document.getElementById('kycMsg').textContent = 'Uploading...';
+      try {
+        // POST to backend KYC endpoint: /api/kyc/submit
+        const res = await fetch(CONFIG.apiBase + '/kyc/submit', { method:'POST', body: fd });
+        const data = await res.json();
+        if(res.ok){
+          document.getElementById('kycMsg').textContent = 'Submitted. Status: ' + (data.status || 'submitted');
+          document.getElementById('kycStatus').textContent = data.status || 'submitted';
+        } else {
+          document.getElementById('kycMsg').textContent = 'KYC submit error: ' + (data.error || 'server');
         }
-      });
-    }
+      } catch (err){
+        document.getElementById('kycMsg').textContent = 'Upload failed: ' + err.message;
+      }
+    });
 
-    // Create depth chart (stacked area from orderbook)
-    function createDepthChart(ob){
-      const ctx = document.getElementById('depthChart').getContext('2d');
-      if(depthChart) depthChart.destroy();
-      // accumulate
-      const bids = ob.bids.slice().sort((a,b)=>b[0]-a[0]); // desc
-      const asks = ob.asks.slice().sort((a,b)=>a[0]-b[0]); // asc
-      const bidCum = [], askCum = [];
-      let cum=0; bids.forEach(b=>{ cum += +b[1]; bidCum.push({x:b[0], y: cum}); });
-      cum=0; asks.forEach(a=>{ cum += +a[1]; askCum.push({x:a[0], y: cum}); });
+    // ------- Withdraw request -------
+    document.getElementById('withdrawForm').addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const cur = document.getElementById('wcur').value;
+      const addr = document.getElementById('waddr').value.trim();
+      const amount = document.getElementById('wamount').value;
+      const out = document.getElementById('withdrawMsg');
+      if(!addr || !amount) { out.textContent = 'Fill fields'; return; }
+      out.textContent = 'Requesting withdrawal...';
+      try {
+        const res = await fetch(CONFIG.apiBase + '/withdrawals', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({currency:cur, to_address:addr, amount}) });
+        const data = await res.json();
+        if(res.ok) out.textContent = 'Withdrawal requested, id ' + (data.withdrawalId || '(mock)');
+        else out.textContent = 'Withdraw error: ' + (data.error || 'server');
+      } catch (err){
+        out.textContent = 'Withdraw failed: ' + err.message;
+      }
+    });
 
-      depthChart = new Chart(ctx, {
-        type:'line',
-        data:{
-          datasets:[
-            {label:'Bids', data: bidCum, borderColor:'rgba(33,199,122,0.9)', backgroundColor:'rgba(33,199,122,0.06)', fill:true, pointRadius:0},
-            {label:'Asks', data: askCum, borderColor:'rgba(255,92,108,0.9)', backgroundColor:'rgba(255,92,108,0.06)', fill:true, pointRadius:0}
-          ]
-        },
-        options:{responsive:true, maintainAspectRatio:false, scales:{x:{type:'linear',ticks:{display:false}}, y:{ticks:{color:'#aaa'}}}, plugins:{legend:{display:false}}}
-      });
-    }
+    // ------- MetaMask connect (for ETH signing/withdraw UX) -------
+    document.getElementById('connectWallet').addEventListener('click', async ()=>{
+      if(typeof window.ethereum === 'undefined'){ alert('MetaMask not available'); return; }
+      try {
+        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        const a = accounts[0];
+        alert('Connected: ' + a);
+        // In production: use wallet address as user identity or to sign withdrawal requests (do not send private keys)
+      } catch (err){
+        alert('Wallet connect failed: ' + err.message);
+      }
+    });
 
-    // Simulate market tick: update candle and last price
-    function simulateMarketTick(){
-      markets.forEach(m=>{
-        // small random walk
-        const vol = (Math.random()-0.5) * (m.price * 0.002);
-        m.price = Math.max(0.0000001, m.price + vol);
-        // update candle series: push small variation to last candle close, occasionally add new candle
-        const series = candleSeries[m.id];
-        if(!series) return;
-        const last = series[series.length-1];
-        const newClose = Math.max(0.0000001, last.c + (Math.random()-0.5)*(m.price*0.001));
-        last.c = +newClose.toFixed(8);
-        last.h = Math.max(last.h, last.c);
-        last.l = Math.min(last.l, last.c);
-        // occasionally add new candle
-        if(Math.random() < 0.12){
-          const o = last.c;
-          const c = Math.max(0.0000001, o + (Math.random()-0.5)*(m.price*0.01));
-          const h = Math.max(o,c) + Math.random()*(m.price*0.002);
-          const l = Math.min(o,c) - Math.random()*(m.price*0.002);
-          series.push({t: Date.now(), o:+o.toFixed(8), h:+h.toFixed(8), l:+l.toFixed(8), c:+c.toFixed(8)});
-          if(series.length>200) series.shift();
+    // ------- Initialization: fetch deposit addresses from API (optional) -------
+    (async function init(){
+      // try fetching deposit addresses from backend; fallback to config constants
+      try {
+        const r = await fetch(CONFIG.apiBase + '/deposit_addresses');
+        if(r.ok){
+          const d = await r.json();
+          if(d.btc) document.getElementById('btcAddress').textContent = d.btc;
+          if(d.eth) document.getElementById('ethAddress').textContent = d.eth;
         }
-      });
+      } catch (err) { /* ignore */ }
+    })();
 
-      // refresh active charts
-      if(candleChart){
-        const ser = candleSeries[activeMarket].slice(-120);
-        candleChart.data.datasets[0].data = ser;
-        candleChart.update('none');
-      }
-      // update price display
-      const m = getMarket(activeMarket);
-      if(m) {
-        document.getElementById('chartSymbol').textContent = m.id;
-        document.querySelector('#chartSub').innerHTML = `${formatPrice(m.price)} • <span class="small ${(Math.random()>0.5)?'up':'down'}">${(Math.random()*6).toFixed(2)}%</span>`;
-      }
-      // update market list prices UI
-      renderMarketList();
-    }
-
-    // Simulate small orderbook shifts
-    function simulateOrderbookShifts(){
-      markets.forEach(m=>{
-        const ob = orderbook[m.id];
-        if(!ob) return;
-        // randomly change sizes a bit
-        ob.bids.forEach(b => { b[1] = Math.max(0.0001, +(b[1] * (0.9 + Math.random()*0.2)).toFixed(4)); });
-        ob.asks.forEach(a => { a[1] = Math.max(0.0001, +(a[1] * (0.9 + Math.random()*0.2)).toFixed(4)); });
-      });
-      // refresh depth & orderbook lists for active market
-      renderOrderBook(activeMarket);
-      if(depthChart) createDepthChart(orderbook[activeMarket]);
-    }
-
-    // Render order book UI (asks / bids lists)
-    function renderOrderBook(marketId){
-      const ob = orderbook[marketId];
-      if(!ob) return;
-      // asks on top (higher prices)
-      asksEl.innerHTML = '';
-      ob.asks.slice(0,12).forEach(a=>{
-        const r = document.createElement('div'); r.className = 'book-row ask';
-        r.innerHTML = `<div class="small">${formatPrice(a[0])}</div><div class="small">${a[1]}</div>`;
-        asksEl.appendChild(r);
-      });
-      bidsEl.innerHTML = '';
-      ob.bids.slice(0,12).forEach(b=>{
-        const r = document.createElement('div'); r.className = 'book-row bid';
-        r.innerHTML = `<div class="small">${formatPrice(b[0])}</div><div class="small">${b[1]}</div>`;
-        bidsEl.appendChild(r);
-      });
-    }
-
-    // Place order (market or limit)
-    function placeOrder(side){
-      const m = getMarket(activeMarket);
-      if(!m) return alert('Select market');
-      const qty = parseFloat(qtyInput.value);
-      if(!qty || qty <= 0) return alert('Enter amount');
-      let price = parseFloat(priceInput.value);
-      if(oType === 'market'){
-        price = m.price; // execute at current price
-      } else {
-        if(!price || price <= 0) return alert('Enter limit price');
-      }
-      const cost = qty * price;
-      if(side === 'buy'){
-        if(cost > balance) return alert('Insufficient balance');
-        balance -= cost;
-      } else {
-        // for sell in this demo, assume user has asset; we won't track per-asset balances
-        balance += cost;
-      }
-
-      const order = {
-        id: 'T' + Date.now(),
-        market: m.id,
-        side, type: oType,
-        price, qty,
-        time: Date.now(),
-        status: 'filled'
-      };
-      orders.unshift(order);
-      // simulate orderbook effect: insert small trade and adjust orderbook near top
-      simulateTradeEffect(m, price, qty, side);
-      renderOrders();
-      updateBalanceUI();
-      renderOrderBook(activeMarket);
-      createDepthChart(orderbook[activeMarket]);
-
-      // confirmation brief
-      console.log('Order executed', order);
-    }
-
-    function simulateTradeEffect(market, price, qty, side){
-      const ob = orderbook[market.id];
-      if(!ob) return;
-      // adjust sizes near price
-      const list = side === 'buy' ? ob.asks : ob.bids;
-      for(let i=0;i<list.length;i++){
-        if((side==='buy' && list[i][0] <= price+market.step) || (side==='sell' && list[i][0] >= price-market.step)){
-          list[i][1] = Math.max(0.0001, +(list[i][1] * 0.6).toFixed(4));
-          break;
-        }
-      }
-      // shift mid price
-      market.price = price;
-      // add a small trade candle update
-      const ser = candleSeries[market.id];
-      const last = ser[ser.length-1];
-      const newClose = +price.toFixed(8);
-      last.c = newClose;
-      last.h = Math.max(last.h, last.c);
-      last.l = Math.min(last.l, last.c);
-    }
-
-    // Orders list render
-    function renderOrders(){
-      ordersListEl.innerHTML = '';
-      orders.slice(0,50).forEach(o=>{
-        const r = document.createElement('div'); r.className = 'order-row';
-        r.innerHTML = `<div><div style="font-weight:700">${o.market} ${o.side.toUpperCase()}</div><div class="small muted">${o.type.toUpperCase()} • ${new Date(o.time).toLocaleTimeString()}</div></div><div style="text-align:right"><div style="font-weight:800">${formatPrice(o.price)}</div><div class="small">${o.qty}</div></div>`;
-        ordersListEl.appendChild(r);
-      });
-    }
-
-    // Update balance ui
-    function updateBalanceUI(){
-      balanceEl.textContent = balance.toFixed(4) + ' USDT';
-    }
-
-    // Authentication (localStorage demo)
-    function openAuthModal(){
-      overlay.style.display = 'flex';
-      modal.innerHTML = `
-        <h3>Sign Up / Login</h3>
-        <div class="field"><input id="auth_name" placeholder="Name (for sign up)" /></div>
-        <div class="field"><input id="auth_email" placeholder="Email" /></div>
-        <div style="display:flex;gap:8px;margin-top:8px"><button class="btn" id="doSignup">Sign Up</button><button class="btn ghost" id="doLogin">Login</button></div>
-        <div style="margin-top:10px"><button class="btn ghost" id="doClose">Close</button></div>
-      `;
-      document.getElementById('doClose').addEventListener('click', closeAuthModal);
-      document.getElementById('doSignup').addEventListener('click', ()=>{
-        const name = document.getElementById('auth_name').value.trim();
-        const email = document.getElementById('auth_email').value.trim();
-        if(!name || !email) return alert('Enter name and email');
-        const user = {name, email, created: Date.now()};
-        localStorage.setItem('weex_demo_user', JSON.stringify(user));
-        closeAuthModal();
-        applyAuthState(user);
-      });
-      document.getElementById('doLogin').addEventListener('click', ()=>{
-        const email = document.getElementById('auth_email').value.trim();
-        if(!email) return alert('Enter email to login (demo)');
-        const user = {name: email.split('@')[0], email, restored: true};
-        localStorage.setItem('weex_demo_user', JSON.stringify(user));
-        closeAuthModal();
-        applyAuthState(user);
-      });
-    }
-    function closeAuthModal(){ overlay.style.display = 'none'; modal.innerHTML=''; }
-
-    function applyAuthState(user){
-      if(!user) return;
-      document.getElementById('brandTitle').textContent = `Hello, ${user.name}`;
-      document.getElementById('userEmail').textContent = user.email || user.name;
-      authBtn.classList.add('hidden');
-      logoutBtn.classList.remove('hidden');
-    }
-    function restoreAuthState(){
-      const raw = localStorage.getItem('weex_demo_user');
-      if(raw){
-        const user = JSON.parse(raw);
-        applyAuthState(user);
-      } else {
-        // ensure logged-out UI
-        authBtn.classList.remove('hidden');
-        logoutBtn.classList.add('hidden');
-      }
-    }
-    function logout(){
-      localStorage.removeItem('weex_demo_user');
-      document.getElementById('brandTitle').textContent = 'WEEX Demo';
-      document.getElementById('userEmail').textContent = 'guest';
-      authBtn.classList.remove('hidden');
-      logoutBtn.classList.add('hidden');
-    }
-
-    // restore UI state on start
-    init();
-
-    // ensure orderbook / depth rendering when market selected
-    function selectMarketAndUpdate(id){
-      selectMarket(id);
-      renderOrderBook(id);
-    }
-
-    // initial book render
-    renderOrderBook(activeMarket);
-
+    // ------- Notes: Replace all CONFIG.apiBase endpoints and WebSocket URLs with real backend services.
+    // Backend must implement:
+    // - Authentication (sessions/JWT) and user accounts
+    // - KYC provider integration (Onfido/Jumio/Sumsub) with server-side calls and webhooks
+    // - Custodial wallet management: hot wallet, cold storage, withdrawal processing, fee handling
+    // - Deposit monitoring: blockchain listeners or third-party webhooks (BlockCypher, Alchemy, Infura, etc.)
+    // - Order matching engine, trade settlement, ledger accounting, and audit logs
+    // - Rate-limiting, input validation, encryption at rest, secrets in HSM/KMS, TLS
+    // This file intentionally does not include any private key handling.
   </script>
 </body>
 </html>
